@@ -547,7 +547,7 @@ fun SalasScreen(navController: NavController) {
 
         Card(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = Color(0xE5FFFAFA)),
             modifier = Modifier
                 .fillMaxWidth(1f)
                 .height(680.dp)
@@ -559,6 +559,32 @@ fun SalasScreen(navController: NavController) {
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Criar sala",
+                        fontSize = 30.sp,
+                        color = Color(0xFFFF7094),
+                        fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                        fontWeight = FontWeight(400),
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Pesquisar",
+                        tint = Color(0xFFFF7094)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                SalaItem(testeSala)
+                SalaItem(testeSala)
+                SalaItem(testeSala)
                 SalaItem(testeSala)
             }
         }
