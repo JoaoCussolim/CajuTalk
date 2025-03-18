@@ -195,7 +195,7 @@ fun LoginScreen(navController: NavController) {
 
                 Button(
                     onClick = {
-                        // Lógica de login
+                        navController.navigate("salas")
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -368,7 +368,7 @@ fun CadastroScreen(navController: NavController) {
                 
                 Button(
                     onClick = {
-                        // Lógica de cadastro
+                        navController.navigate("salas")
                     },
                     modifier = Modifier
                         .fillMaxWidth()
