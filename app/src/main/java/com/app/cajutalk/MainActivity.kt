@@ -77,9 +77,9 @@ fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    val topColor = Color(0xFFFFD779)
+    val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
-    val waveColor = Color(0xFFFFA95C)
+    val waveColor = Color(0xFFFFD670)
     val accentColor = Color(0xFFFF6F9C)
     val highlightColor = Color(0xFFFF7D4C)
 
@@ -227,9 +227,9 @@ fun LoginScreen(navController: NavController) {
 
 @Composable
 fun CadastroScreen(navController: NavController) {
-    val topColor = Color(0xFFFFD779)
+    val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
-    val waveColor = Color(0xFFFFA95C)
+    val waveColor = Color(0xFFFFD670)
     val accentColor = Color(0xFFFF6F9C)
     val highlightColor = Color(0xFFFF7D4C)
 
