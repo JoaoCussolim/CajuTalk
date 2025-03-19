@@ -1,9 +1,8 @@
-package com.app.cajutalk;
+package com.app.cajutalk
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,7 +53,7 @@ class MainActivity : ComponentActivity() {
 fun CajuTalkApp() {
     val navController = rememberNavController()
 
-    NavHost(navController, startDestination = "salas") {
+    NavHost(navController, startDestination = "cadastro") {
         composable("login") { LoginScreen(navController) }
         composable("cadastro") { CadastroScreen(navController) }
         composable("salas") { SalasScreen(navController) }
@@ -394,7 +393,7 @@ fun CadastroScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = "Já possui uma conta? ",)
+                    Text(text = "Já possui uma conta? ")
                     Text(
                         text = "Faça login",
                         fontSize = 15.sp,
@@ -416,7 +415,8 @@ fun SalaItem(sala: Sala) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable {},
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -443,9 +443,16 @@ fun SalaItem(sala: Sala) {
 fun SalasScreen(navController: NavController) {
     val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
-    var exibirPublicas = false
+    var exibirPublicas by remember { mutableStateOf(false) }
     val headerSpace = 32.dp
-    val testeSala = Sala(nome = "Exército de Sombras", membros = "Beru, Igris, Tusk, Iron", senha = "", imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg")
+    val salasPublicas = listOf(
+        Sala(nome = "Exército de Sombras", membros = "Beru, Igris, Tusk, Iron", senha = "", imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg"),
+        Sala(nome = "Exército de Pokémon", membros = "Arceus, Pikachu, Charizard, Pichu", senha = "", imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png")
+    )
+    val salasPrivadas = listOf(
+        Sala(nome = "Exército de Dragões", membros = "Dragão, Dragãozão, Dragãozinho", senha = "", imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg"),
+        Sala(nome = "Exército de Lobisomens", membros = "Lobisomem, Lobão, Lobimito, Lobo", senha = "", imageUrl = "https://mortesubita.net/wp-content/uploads/2022/06/lobisomem.png")
+    )
 
     Box(
         modifier = Modifier
@@ -550,7 +557,7 @@ fun SalasScreen(navController: NavController) {
             colors = CardDefaults.cardColors(containerColor = Color(0xE5FFFAFA)),
             modifier = Modifier
                 .fillMaxWidth(1f)
-                .height(680.dp)
+                .height(640.dp)
                 .align(Alignment.BottomCenter)
         ) {
             Column(
@@ -582,10 +589,13 @@ fun SalasScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                SalaItem(testeSala)
-                SalaItem(testeSala)
-                SalaItem(testeSala)
-                SalaItem(testeSala)
+                val salasExibidas = if (exibirPublicas) salasPublicas else salasPrivadas
+
+                LazyColumn {
+                    items(salasExibidas) { sala ->
+                        SalaItem(sala)
+                    }
+                }
             }
         }
     }
