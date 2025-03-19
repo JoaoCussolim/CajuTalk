@@ -409,6 +409,82 @@ fun CadastroScreen(navController: NavController) {
     }
 }
 
+@Composable
+fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
+    var nomeSala by remember { mutableStateOf("") }
+    var isPrivada by remember { mutableStateOf(false) }
+    var senhaSala by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Criar Nova Sala", fontFamily = FontFamily(Font(R.font.baloo_bhai)))},
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = nomeSala,
+                    onValueChange = { nomeSala = it },
+                    label = { Text(text = "Nome da Sala", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFFF7094)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Privada", fontFamily = FontFamily(Font(R.font.lexend)))
+                    Checkbox(checked = isPrivada, onCheckedChange = { isPrivada = it }, colors = CheckboxColors(
+                        checkedBoxColor = Color(0xFFFF7094),      // Fundo rosa quando marcada
+                        checkedBorderColor = Color(0xFFFF7094),   // Borda rosa quando marcada
+                        checkedCheckmarkColor = Color.White,      // Check branco quando marcada
+
+                        uncheckedBoxColor = Color.Transparent,    // Fundo transparente quando desmarcada
+                        uncheckedBorderColor = Color(0xFFFF7094), // Borda rosa quando desmarcada
+                        uncheckedCheckmarkColor = Color.Transparent, // Check invisível quando desmarcada
+
+                        disabledCheckedBoxColor = Color(0xFFFFB3C1), // Fundo rosa claro quando marcada e desativada
+                        disabledBorderColor = Color.Transparent,
+
+                        disabledUncheckedBoxColor = Color.Transparent, // Fundo transparente quando desmarcada e desativada
+                        disabledUncheckedBorderColor = Color(0xFFFFB3C1), // Borda rosa claro quando desmarcada e desativada
+
+                        disabledIndeterminateBoxColor = Color(0xFFFFB3C1), // Fundo rosa claro para estado indeterminado
+                        disabledIndeterminateBorderColor = Color(0xFFFFB3C1) // Borda rosa claro para estado indeterminado
+                    ))
+                }
+                if (isPrivada) {
+                    OutlinedTextField(
+                        value = senhaSala,
+                        onValueChange = { senhaSala = it },
+                        label = { Text("Senha") },
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                onClick = {
+                    val novaSala = Sala(
+                        nome = nomeSala,
+                        membros = "",
+                        senha = if (isPrivada) senhaSala else "",
+                        imageUrl = "",
+                        mensagens = mutableListOf()
+                    )
+                    onCreate(novaSala)
+                    onDismiss()
+                }
+            ) {
+                Text("Criar")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094))
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
 
 @Composable
 fun SalaItem(sala: Sala) {
@@ -445,13 +521,53 @@ fun SalasScreen(navController: NavController) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
     val headerSpace = 32.dp
+    var mostrarDialogo by remember { mutableStateOf(false) }
     val salasPublicas = listOf(
-        Sala(nome = "Exército de Sombras", membros = "Beru, Igris, Tusk, Iron", senha = "", imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg"),
-        Sala(nome = "Exército de Pokémon", membros = "Arceus, Pikachu, Charizard, Pichu", senha = "", imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png")
+        Sala(
+            nome = "Exército de Sombras",
+            membros = "Beru, Igris, Tusk, Iron",
+            senha = "",
+            imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
+            mensagens = mutableListOf()
+        ),
+        Sala(
+            nome = "Exército de Pokémon",
+            membros = "Arceus, Pikachu, Charizard, Pichu",
+            senha = "",
+            imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
+            mensagens = mutableListOf()
+        ),
+        Sala(
+            nome = "Exército de Banana",
+            membros = "Bananão, Banana, Bananinha, Banano",
+            senha = "",
+            imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
+            mensagens = mutableListOf()
+        ),
+        Sala(
+            nome = "Exército Genérico",
+            membros = "Generico, Generica, Gene, Rico",
+            senha = "",
+            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
+            mensagens = mutableListOf()
+        )
     )
+
     val salasPrivadas = listOf(
-        Sala(nome = "Exército de Dragões", membros = "Dragão, Dragãozão, Dragãozinho", senha = "", imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg"),
-        Sala(nome = "Exército de Lobisomens", membros = "Lobisomem, Lobão, Lobimito, Lobo", senha = "", imageUrl = "https://mortesubita.net/wp-content/uploads/2022/06/lobisomem.png")
+        Sala(
+            nome = "Exército de Dragões",
+            membros = "Dragão, Dragãozão, Dragãozinho",
+            senha = "",
+            imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
+            mensagens = mutableListOf()
+        ),
+        Sala(
+            nome = "Exército de Lobisomens",
+            membros = "Lobisomem, Lobão, Lobimito, Lobo",
+            senha = "",
+            imageUrl = "https://morntesubita.net/wp-content/uploads/2022/06/lobisomem.png",
+            mensagens = mutableListOf()
+        )
     )
 
     Box(
@@ -579,7 +695,14 @@ fun SalasScreen(navController: NavController) {
                         color = Color(0xFFFF7094),
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
+                        modifier = Modifier.clickable{ mostrarDialogo = true }
                     )
+                    if (mostrarDialogo) {
+                        CriarSalaDialog(
+                            onDismiss = { mostrarDialogo = false },
+                            onCreate = { sala -> println("Nova sala criada: ${sala.nome}") }
+                        )
+                    }
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = "Pesquisar",
