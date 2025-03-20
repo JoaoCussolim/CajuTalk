@@ -1,11 +1,13 @@
 package com.app.cajutalk
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -39,15 +43,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             CajuTalkApp()
-        }
-    }
+
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+        } }
 }
+
+var userProfile = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg"
 
 @Composable
 fun CajuTalkApp() {
@@ -57,9 +63,8 @@ fun CajuTalkApp() {
         composable("login") { LoginScreen(navController) }
         composable("cadastro") { CadastroScreen(navController) }
         composable("salas") { SalasScreen(navController) }
-        composable("criar_sala") { CriarSalaScreen(navController) }
         composable("chat") { ChatScreen(navController) }
-        composable("user") { UserScreen(navController) }
+        composable("user-profile") { UserProfileScreen(navController) }
     }
 }
 
@@ -423,36 +428,45 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
                 OutlinedTextField(
                     value = nomeSala,
                     onValueChange = { nomeSala = it },
-                    label = { Text(text = "Nome da Sala", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFFF7094)) }
+                    label = {
+                        Text(text = "Nome da Sala", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFF08080))},
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFFF6F9C),
+                        cursorColor = Color(0xFFFF6F9C)
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Privada", fontFamily = FontFamily(Font(R.font.lexend)))
                     Checkbox(checked = isPrivada, onCheckedChange = { isPrivada = it }, colors = CheckboxColors(
-                        checkedBoxColor = Color(0xFFFF7094),      // Fundo rosa quando marcada
-                        checkedBorderColor = Color(0xFFFF7094),   // Borda rosa quando marcada
-                        checkedCheckmarkColor = Color.White,      // Check branco quando marcada
+                        checkedBoxColor = Color(0xFFFF7094),
+                        checkedBorderColor = Color(0xFFFF7094),
+                        checkedCheckmarkColor = Color.White,
 
-                        uncheckedBoxColor = Color.Transparent,    // Fundo transparente quando desmarcada
-                        uncheckedBorderColor = Color(0xFFFF7094), // Borda rosa quando desmarcada
-                        uncheckedCheckmarkColor = Color.Transparent, // Check invisível quando desmarcada
+                        uncheckedBoxColor = Color.Transparent,
+                        uncheckedBorderColor = Color(0xFFFF7094),
+                        uncheckedCheckmarkColor = Color.Transparent,
 
-                        disabledCheckedBoxColor = Color(0xFFFFB3C1), // Fundo rosa claro quando marcada e desativada
+                        disabledCheckedBoxColor = Color(0xFFFFB3C1),
                         disabledBorderColor = Color.Transparent,
 
-                        disabledUncheckedBoxColor = Color.Transparent, // Fundo transparente quando desmarcada e desativada
-                        disabledUncheckedBorderColor = Color(0xFFFFB3C1), // Borda rosa claro quando desmarcada e desativada
+                        disabledUncheckedBoxColor = Color.Transparent,
+                        disabledUncheckedBorderColor = Color(0xFFFFB3C1),
 
-                        disabledIndeterminateBoxColor = Color(0xFFFFB3C1), // Fundo rosa claro para estado indeterminado
-                        disabledIndeterminateBorderColor = Color(0xFFFFB3C1) // Borda rosa claro para estado indeterminado
+                        disabledIndeterminateBoxColor = Color(0xFFFFB3C1),
+                        disabledIndeterminateBorderColor = Color(0xFFFFB3C1)
                     ))
                 }
                 if (isPrivada) {
                     OutlinedTextField(
                         value = senhaSala,
                         onValueChange = { senhaSala = it },
-                        label = { Text("Senha") },
-                        visualTransformation = PasswordVisualTransformation()
+                        label = { Text(text = "Senha", color = Color(0xFFF08080)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF6F9C),
+                            cursorColor = Color(0xFFFF6F9C)
+                        )
                     )
                 }
             }
@@ -463,9 +477,9 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
                 onClick = {
                     val novaSala = Sala(
                         nome = nomeSala,
-                        membros = "",
+                        membros = "Usuário, ...",
                         senha = if (isPrivada) senhaSala else "",
-                        imageUrl = "",
+                        imageUrl = userProfile,
                         mensagens = mutableListOf()
                     )
                     onCreate(novaSala)
@@ -522,7 +536,7 @@ fun SalasScreen(navController: NavController) {
     var exibirPublicas by remember { mutableStateOf(false) }
     val headerSpace = 32.dp
     var mostrarDialogo by remember { mutableStateOf(false) }
-    val salasPublicas = listOf(
+    val salasPublicas = remember {mutableStateListOf(
         Sala(
             nome = "Exército de Sombras",
             membros = "Beru, Igris, Tusk, Iron",
@@ -551,9 +565,8 @@ fun SalasScreen(navController: NavController) {
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
             mensagens = mutableListOf()
         )
-    )
-
-    val salasPrivadas = listOf(
+    )}
+    val salasPrivadas = remember {mutableStateListOf(
         Sala(
             nome = "Exército de Dragões",
             membros = "Dragão, Dragãozão, Dragãozinho",
@@ -565,10 +578,15 @@ fun SalasScreen(navController: NavController) {
             nome = "Exército de Lobisomens",
             membros = "Lobisomem, Lobão, Lobimito, Lobo",
             senha = "",
-            imageUrl = "https://morntesubita.net/wp-content/uploads/2022/06/lobisomem.png",
+            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHCbqyj7ojzt5q9CAAWFsgHKf37qgqbQNReA&s",
             mensagens = mutableListOf()
         )
-    )
+    )}
+    val salasExibidas by remember {
+        derivedStateOf {
+            if (exibirPublicas) salasPublicas else salasPrivadas
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -597,11 +615,11 @@ fun SalasScreen(navController: NavController) {
                         .size(64.dp)
                         .clip(CircleShape)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.profile),
+                    AsyncImage(
+                        model = userProfile,
                         contentDescription = "Ícone do Usuário",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        modifier = Modifier.fillMaxSize().clickable{ navController.navigate("user-profile") },
+                        contentScale = ContentScale.Crop,
                     )
                 }
 
@@ -689,18 +707,27 @@ fun SalasScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Criar sala",
-                        fontSize = 30.sp,
-                        color = Color(0xFFFF7094),
-                        fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-                        fontWeight = FontWeight(400),
-                        modifier = Modifier.clickable{ mostrarDialogo = true }
-                    )
+                    Button(
+                        onClick = { mostrarDialogo = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF7094)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    ){
+                        Text(
+                            text = "Criar sala",
+                            fontSize = 20.sp,
+                            color = Color(0xFFFFFFFF),
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(400))
+                    }
                     if (mostrarDialogo) {
                         CriarSalaDialog(
                             onDismiss = { mostrarDialogo = false },
-                            onCreate = { sala -> println("Nova sala criada: ${sala.nome}") }
+                            onCreate = { sala ->
+                                salasPrivadas.add(sala)
+                            }
                         )
                     }
                     Icon(
@@ -712,22 +739,14 @@ fun SalasScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                val salasExibidas = if (exibirPublicas) salasPublicas else salasPrivadas
-
                 LazyColumn {
                     items(salasExibidas) { sala ->
-                        SalaItem(sala)
+                        SalaItem(sala = sala)
                     }
                 }
             }
         }
     }
-}
-
-
-@Composable
-fun CriarSalaScreen(navController: NavController) {
-
 }
 
 @Composable
@@ -736,8 +755,319 @@ fun ChatScreen(navController: NavController) {
 }
 
 @Composable
-fun UserScreen(navController: NavController){
+fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
+    var red by remember { mutableStateOf((selectedColor.red * 255).toInt()) }
+    var green by remember { mutableStateOf((selectedColor.green * 255).toInt()) }
+    var blue by remember { mutableStateOf((selectedColor.blue * 255).toInt()) }
+    var textColor by remember { mutableStateOf("$red, $green, $blue") }
+    val accentColor = Color(0xFFFF6F9C)
 
+    fun updateColorFromText(input: String) {
+        val values = input.split(",").map { it.trim().toIntOrNull() ?: 0 }
+        if (values.size == 3) {
+            red = values[0].coerceIn(0, 255)
+            green = values[1].coerceIn(0, 255)
+            blue = values[2].coerceIn(0, 255)
+            onColorChanged(Color(red / 255f, green / 255f, blue / 255f))
+        }
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .background(Color(red / 255f, green / 255f, blue / 255f), shape = RoundedCornerShape(8.dp))
+                .border(2.dp, Color.Black, shape = RoundedCornerShape(8.dp))
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = textColor,
+            onValueChange = { input ->
+                textColor = input
+                updateColorFromText(input)
+            },
+            label = { Text(text = "RGB", color = accentColor)},
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = accentColor,
+                cursorColor = accentColor,
+                unfocusedBorderColor = accentColor,
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Red)
+        Slider(
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFFF08080),
+                activeTrackColor = Color(0xFFFF7094),
+                inactiveTrackColor = Color(0xFFDDDDDD)
+            ),
+            value = red.toFloat(),
+            onValueChange = { red = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(Color(red / 255f, green / 255f, blue / 255f)) },
+            valueRange = 0f..255f
+        )
+
+        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Green)
+        Slider(
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFFF08080),
+                activeTrackColor = Color(0xFFFF7094),
+                inactiveTrackColor = Color(0xFFDDDDDD)
+            ),
+            value = green.toFloat(),
+            onValueChange = { green = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(Color(red / 255f, green / 255f, blue / 255f)) },
+            valueRange = 0f..255f
+        )
+
+        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Blue)
+        Slider(
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFFF08080),
+                activeTrackColor = Color(0xFFFF7094),
+                inactiveTrackColor = Color(0xFFDDDDDD)
+            ),
+            value = blue.toFloat(),
+            onValueChange = { blue = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(Color(red / 255f, green / 255f, blue / 255f)) },
+            valueRange = 0f..255f
+        )
+    }
+}
+
+@Composable
+fun ColorPickerButton(selectedColor: Color, onColorSelected: (Color) -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+    var tempColor by remember { mutableStateOf(selectedColor) }
+
+    Box(
+        modifier = Modifier
+            .size(50.dp)
+            .background(tempColor, shape = RoundedCornerShape(8.dp))
+            .border(2.dp, Color.Black, shape = RoundedCornerShape(8.dp))
+            .clickable { showDialog = true }
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(text = "Escolha uma cor", fontFamily = FontFamily(Font(R.font.baloo_bhai))) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    ColorPicker(
+                        selectedColor = tempColor,
+                        onColorChanged = { color -> tempColor = color }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onColorSelected(tempColor)
+                        showDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6F9C))
+                ) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF08080))
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun UserProfileScreen(navController: NavController) {
+    val backgroundColor = Color(0xFFFBE5B0)
+    val accentColor = Color(0xFFFF6F9C)
+    var name by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(Color.White) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = backgroundColor)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            contentDescription = "Sair",
+            modifier = Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clickable { navController.navigate("salas") },
+            tint = Color(0xFFFFAA80)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Olá, Usuário",
+                fontSize = 30.sp,
+                fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                fontWeight = FontWeight(700),
+                color = Color(0xFFFF9770)
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(140.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                AsyncImage(
+                    model = userProfile,
+                    contentDescription = "Ícone do Usuário",
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFDDC1)),
+                    contentScale = ContentScale.Crop
+                )
+
+                IconButton(
+                    onClick = { /* Ação para trocar a imagem */ },
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color(0xFFFF80AB), shape = CircleShape)
+                        .border(2.dp, Color.White, CircleShape)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.camera_icon),
+                        contentDescription = "Escolher imagem",
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+        }
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x9EFFFAFA)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .height(550.dp)
+                .align(alignment = Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Pessoal",
+                    fontSize = 28.sp,
+                    fontFamily = FontFamily(Font(R.font.anton)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFFFD670),
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Nome",
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFF08080),
+                )
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = {
+                        Text(
+                            text = "",
+                            fontSize = 14.sp,
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(700),
+                            color = Color(0xFFF08080),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor,
+                        cursorColor = accentColor
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Recado",
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFF08080),
+                )
+
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = {
+                        Text(
+                            text = "",
+                            fontSize = 14.sp,
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(700),
+                            color = Color(0xFFF08080),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentColor,
+                        cursorColor = accentColor
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Personalização",
+                    fontSize = 28.sp,
+                    fontFamily = FontFamily(Font(R.font.anton)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFFFD670),
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Text(
+                    text = "Cor de Fundo",
+                    fontSize = 20.sp,
+                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFF08080),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ColorPickerButton(selectedColor) { newColor ->
+                        selectedColor = newColor
+                    }
+
+                    Spacer(modifier = Modifier.width(18.dp))
+
+                    Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(R.font.lexend)))
+                }
+            }
+        }
+    }
 }
 
 @Composable
