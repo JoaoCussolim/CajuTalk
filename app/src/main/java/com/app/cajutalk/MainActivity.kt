@@ -17,8 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,7 +42,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 
 class MainActivity : ComponentActivity() {
@@ -63,7 +68,14 @@ fun CajuTalkApp() {
         composable("login") { LoginScreen(navController) }
         composable("cadastro") { CadastroScreen(navController) }
         composable("salas") { SalasScreen(navController) }
-        composable("chat") { ChatScreen(navController) }
+        composable("salas") { SalasScreen(navController) }
+        composable(
+            "chat/{salaNome}",
+            arguments = listOf(navArgument("salaNome") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val salaNome = backStackEntry.arguments?.getString("salaNome") ?: ""
+            ChatScreen(salaNome, navController)
+        }
         composable("user-profile") { UserProfileScreen(navController) }
     }
 }
@@ -501,12 +513,12 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
 }
 
 @Composable
-fun SalaItem(sala: Sala) {
+fun SalaItem(sala: Sala, navController : NavController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable {},
+            .clickable {navController.navigate("chat/${sala.nome}")},
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -741,7 +753,7 @@ fun SalasScreen(navController: NavController) {
 
                 LazyColumn {
                     items(salasExibidas) { sala ->
-                        SalaItem(sala = sala)
+                        SalaItem(sala, navController)
                     }
                 }
             }
@@ -750,8 +762,26 @@ fun SalasScreen(navController: NavController) {
 }
 
 @Composable
-fun ChatScreen(navController: NavController) {
+fun ChatScreen(nomeSala : String, navController: NavController) {
 
+}
+
+@Composable
+fun ChatBubble(text: String) {
+    Card(
+        colors = CardDefaults.cardColors(Color(0xFF1E1E1E)),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(12.dp)
+        )
+    }
 }
 
 @Composable
