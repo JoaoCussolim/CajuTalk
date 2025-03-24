@@ -12,12 +12,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,6 +43,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,7 +57,8 @@ class MainActivity : ComponentActivity() {
         } }
 }
 
-var userProfile = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg"
+var mainUser = User(login = "Eba", senha = "Eba123", name = "Sung Jin Woo", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
+var secondUser = User(login = "InimigoDoEba", senha = "morraeba", name = "Antares", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
 
 @Composable
 fun CajuTalkApp() {
@@ -63,7 +68,19 @@ fun CajuTalkApp() {
         composable("login") { LoginScreen(navController) }
         composable("cadastro") { CadastroScreen(navController) }
         composable("salas") { SalasScreen(navController) }
-        composable("chat") { ChatScreen(navController) }
+        composable("chat/{salaNome}/{salaCriador}/{salaImagem}") { backStackEntry ->
+            val salaNomeEncoded  = backStackEntry.arguments?.getString("salaNome")
+            val salaCriadorEncoded  = backStackEntry.arguments?.getString("salaCriador")
+            val salaImagemEncoded  = backStackEntry.arguments?.getString("salaImagem")
+
+            if (salaNomeEncoded != null && salaCriadorEncoded != null && salaImagemEncoded != null) {
+                val salaNome = URLDecoder.decode(salaNomeEncoded, StandardCharsets.UTF_8.toString())
+                val salaCriador = URLDecoder.decode(salaCriadorEncoded, StandardCharsets.UTF_8.toString())
+                val salaImagem = URLDecoder.decode(salaImagemEncoded, StandardCharsets.UTF_8.toString())
+
+                ChatScreen(navController, salaNome, salaCriador, salaImagem)
+            }
+        }
         composable("user-profile") { UserProfileScreen(navController) }
     }
 }
@@ -286,7 +303,7 @@ fun CadastroScreen(navController: NavController) {
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             modifier = Modifier
-                .fillMaxWidth(0.8f) // Deixa mais estreito
+                .fillMaxWidth(0.8f)
                 .align(Alignment.Center)
         ) {
             Column(
@@ -479,8 +496,9 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
                         nome = nomeSala,
                         membros = "Usuário, ...",
                         senha = if (isPrivada) senhaSala else "",
-                        imageUrl = userProfile,
-                        mensagens = mutableListOf()
+                        imageUrl = mainUser.imageUrl,
+                        mensagens = mutableListOf(),
+                        criador = mainUser,
                     )
                     onCreate(novaSala)
                     onDismiss()
@@ -501,12 +519,16 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
 }
 
 @Composable
-fun SalaItem(sala: Sala) {
+fun SalaItem(sala: Sala, navController : NavController) {
+    val salaNomeEncoded = URLEncoder.encode(sala.nome, StandardCharsets.UTF_8.toString())
+    val salaCriadorEncoded = URLEncoder.encode(sala.criador.name, StandardCharsets.UTF_8.toString())
+    val salaImagemEncoded = URLEncoder.encode(sala.imageUrl, StandardCharsets.UTF_8.toString())
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable {},
+            .clickable {navController.navigate("chat/${salaNomeEncoded}/${salaCriadorEncoded}/${salaImagemEncoded}")},
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -538,48 +560,54 @@ fun SalasScreen(navController: NavController) {
     var mostrarDialogo by remember { mutableStateOf(false) }
     val salasPublicas = remember {mutableStateListOf(
         Sala(
-            nome = "Exército de Sombras",
-            membros = "Beru, Igris, Tusk, Iron",
+            nome = "Exército de Dragões",
+            membros = "Dragão, Dragãozão, Dragãozinho",
             senha = "",
-            imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
-            mensagens = mutableListOf()
+            imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
+            mensagens = mutableListOf(),
+            criador = secondUser
         ),
         Sala(
             nome = "Exército de Pokémon",
             membros = "Arceus, Pikachu, Charizard, Pichu",
             senha = "",
             imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
-            mensagens = mutableListOf()
+            mensagens = mutableListOf(),
+            criador = secondUser
         ),
         Sala(
             nome = "Exército de Banana",
             membros = "Bananão, Banana, Bananinha, Banano",
             senha = "",
             imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
-            mensagens = mutableListOf()
+            mensagens = mutableListOf(),
+            criador = secondUser
         ),
         Sala(
             nome = "Exército Genérico",
             membros = "Generico, Generica, Gene, Rico",
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
-            mensagens = mutableListOf()
+            mensagens = mutableListOf(),
+            criador = secondUser
         )
     )}
     val salasPrivadas = remember {mutableStateListOf(
         Sala(
-            nome = "Exército de Dragões",
-            membros = "Dragão, Dragãozão, Dragãozinho",
+            nome = "Exército de Sombras",
+            membros = "Beru, Igris, Tusk, Iron",
             senha = "",
-            imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
-            mensagens = mutableListOf()
+            imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
+            mensagens = mutableListOf(),
+            criador = mainUser
         ),
         Sala(
             nome = "Exército de Lobisomens",
             membros = "Lobisomem, Lobão, Lobimito, Lobo",
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHCbqyj7ojzt5q9CAAWFsgHKf37qgqbQNReA&s",
-            mensagens = mutableListOf()
+            mensagens = mutableListOf(),
+            criador = mainUser
         )
     )}
     val salasExibidas by remember {
@@ -616,7 +644,7 @@ fun SalasScreen(navController: NavController) {
                         .clip(CircleShape)
                 ) {
                     AsyncImage(
-                        model = userProfile,
+                        model = mainUser.imageUrl,
                         contentDescription = "Ícone do Usuário",
                         modifier = Modifier.fillMaxSize().clickable{ navController.navigate("user-profile") },
                         contentScale = ContentScale.Crop,
@@ -641,6 +669,9 @@ fun SalasScreen(navController: NavController) {
                     imageVector = Icons.Filled.Menu,
                     contentDescription = "Menu",
                     tint = Color.White,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(40.dp)
                 )
             }
 
@@ -741,7 +772,7 @@ fun SalasScreen(navController: NavController) {
 
                 LazyColumn {
                     items(salasExibidas) { sala ->
-                        SalaItem(sala = sala)
+                        SalaItem(sala = sala, navController = navController)
                     }
                 }
             }
@@ -750,8 +781,223 @@ fun SalasScreen(navController: NavController) {
 }
 
 @Composable
-fun ChatScreen(navController: NavController) {
+fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
+    val isUserMessage = sender.login == mainUser.login
+    val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
+    val shape = if (isUserMessage) {
+        RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+    } else {
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+    }
 
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        if (!isUserMessage && showProfile) {
+            AsyncImage(
+                model = sender.imageUrl,
+                contentDescription = "Foto de ${sender.name}",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .background(bubbleColor, shape)
+                .padding(12.dp)
+                .wrapContentWidth()
+        ) {
+            Text(
+                text = message,
+                color = Color.White,
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ChatScreen(
+    navController: NavController,
+    salaNome: String,
+    salaCriador: String?,
+    salaImagem: String?
+) {
+    val topColor = Color(0xFFFF9770)
+    val bottomColor = Color(0xFFFDB361)
+    var message by remember { mutableStateOf("") }
+    val messages = remember { mutableStateListOf<Pair<String, User>>() }
+
+    fun sendMessage(text: String, sender: User) {
+        if (text.isBlank()) return
+
+        messages.add(text to sender)
+
+        if (sender == mainUser) {
+            messages.add("Vou te matar!" to secondUser)
+            messages.add("Ou você é o sung jin woo? \uD83D\uDE28" to secondUser)
+        }
+    }
+
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(topColor, bottomColor),
+                    startY = 0f,
+                    endY = Float.POSITIVE_INFINITY
+                )
+            )
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .padding(vertical = 16.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                    contentDescription = "Sair",
+                    modifier = Modifier
+                        .padding(vertical = 20.dp)
+                        .size(62.dp)
+                        .clickable { navController.navigate("salas") },
+                    tint = Color(0xFFFF5313)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(83.dp)
+                        .clip(CircleShape)
+                        .background(color = Color(0xFFFFD670))
+                        .align(Alignment.CenterVertically)
+                ) {
+                    AsyncImage(
+                        model = salaImagem,
+                        contentDescription = "Ícone da Sala",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(
+                    Modifier.align(Alignment.CenterVertically)
+                ) {
+                    Text(
+                        text = salaNome,
+                        fontSize = 30.sp,
+                        fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                        fontWeight = FontWeight(400),
+                        color = Color(0xFFFF5313),
+                    )
+                    Text(
+                        text = "Criada por: $salaCriador",
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                        fontWeight = FontWeight(400),
+                        color = Color(0xE5FFD670),
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "Menu",
+                    tint = Color(0xFFFF5313),
+                    modifier = Modifier
+                        .padding(vertical = 28.dp, horizontal = 16.dp)
+                        .size(40.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xE5FFFAFA)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        reverseLayout = true
+                    ) {
+                        val reversedMessages = messages.reversed()
+
+                        itemsIndexed(reversedMessages) { index, (message, sender) ->
+                            val nextSender = reversedMessages.getOrNull(index + 1)?.second
+                            val showProfile = nextSender?.login != sender.login
+
+                            ChatBubble(message, sender, showProfile)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { /* Lógica para anexos */ }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.anexo_icon),
+                                contentDescription = "Anexo"
+                            )
+                        }
+                        OutlinedTextField(
+                            value = message,
+                            onValueChange = { message = it },
+                            placeholder = { Text("Digitar...", color = Color(0xFFFFA000)) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(25.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Color.Transparent,
+                                cursorColor = Color(0xFFFFA000),
+                                focusedContainerColor = Color(0xFFFFD670),
+                                unfocusedContainerColor = Color(0xFFFFD670),
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFF7090))
+                                .clickable {
+                                    if (message.isNotBlank()) {
+                                        sendMessage(message, mainUser)
+                                        message = ""
+                                    } else {
+                                        // Lógica para gravar áudio
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = if (message.isNotBlank()) painterResource(id = R.drawable.send_icon) else painterResource(id = R.drawable.microfone_icon),
+                                contentDescription = if (message.isNotBlank()) "Enviar" else "Microfone",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -799,7 +1045,7 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Red)
+        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -811,7 +1057,7 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
             valueRange = 0f..255f
         )
 
-        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Green)
+        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -823,7 +1069,7 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
             valueRange = 0f..255f
         )
 
-        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Blue)
+        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -928,7 +1174,7 @@ fun UserProfileScreen(navController: NavController) {
                 contentAlignment = Alignment.BottomEnd
             ) {
                 AsyncImage(
-                    model = userProfile,
+                    model = mainUser.imageUrl,
                     contentDescription = "Ícone do Usuário",
                     modifier = Modifier
                         .size(160.dp)
