@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,7 +40,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
@@ -61,27 +64,47 @@ var mainUser = User(login = "Eba", senha = "Eba123", name = "Sung Jin Woo", imag
 var secondUser = User(login = "InimigoDoEba", senha = "morraeba", name = "Antares", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
 
 @Composable
+fun FocusClearContainer(content: @Composable () -> Unit) {
+    val focusManager = LocalFocusManager.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
+    ) {
+        content()
+    }
+}
+
+
+@Composable
 fun CajuTalkApp() {
     val navController = rememberNavController()
 
-    NavHost(navController, startDestination = "cadastro") {
-        composable("login") { LoginScreen(navController) }
-        composable("cadastro") { CadastroScreen(navController) }
-        composable("salas") { SalasScreen(navController) }
-        composable("chat/{salaNome}/{salaCriador}/{salaImagem}") { backStackEntry ->
-            val salaNomeEncoded  = backStackEntry.arguments?.getString("salaNome")
-            val salaCriadorEncoded  = backStackEntry.arguments?.getString("salaCriador")
-            val salaImagemEncoded  = backStackEntry.arguments?.getString("salaImagem")
+    FocusClearContainer{
+        NavHost(navController, startDestination = "cadastro") {
+            composable("login") { LoginScreen(navController) }
+            composable("cadastro") { CadastroScreen(navController) }
+            composable("salas") { SalasScreen(navController) }
+            composable("chat/{salaNome}/{salaCriador}/{salaImagem}") { backStackEntry ->
+                val salaNomeEncoded  = backStackEntry.arguments?.getString("salaNome")
+                val salaCriadorEncoded  = backStackEntry.arguments?.getString("salaCriador")
+                val salaImagemEncoded  = backStackEntry.arguments?.getString("salaImagem")
 
-            if (salaNomeEncoded != null && salaCriadorEncoded != null && salaImagemEncoded != null) {
-                val salaNome = URLDecoder.decode(salaNomeEncoded, StandardCharsets.UTF_8.toString())
-                val salaCriador = URLDecoder.decode(salaCriadorEncoded, StandardCharsets.UTF_8.toString())
-                val salaImagem = URLDecoder.decode(salaImagemEncoded, StandardCharsets.UTF_8.toString())
+                if (salaNomeEncoded != null && salaCriadorEncoded != null && salaImagemEncoded != null) {
+                    val salaNome = URLDecoder.decode(salaNomeEncoded, StandardCharsets.UTF_8.toString())
+                    val salaCriador = URLDecoder.decode(salaCriadorEncoded, StandardCharsets.UTF_8.toString())
+                    val salaImagem = URLDecoder.decode(salaImagemEncoded, StandardCharsets.UTF_8.toString())
 
-                ChatScreen(navController, salaNome, salaCriador, salaImagem)
+                    ChatScreen(navController, salaNome, salaCriador, salaImagem)
+                }
             }
+            composable("user-profile") { UserProfileScreen(navController) }
         }
-        composable("user-profile") { UserProfileScreen(navController) }
     }
 }
 
@@ -1002,9 +1025,9 @@ fun ChatScreen(
 
 @Composable
 fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
-    var red by remember { mutableStateOf((selectedColor.red * 255).toInt()) }
-    var green by remember { mutableStateOf((selectedColor.green * 255).toInt()) }
-    var blue by remember { mutableStateOf((selectedColor.blue * 255).toInt()) }
+    var red by remember { mutableIntStateOf((selectedColor.red * 255).toInt()) }
+    var green by remember { mutableIntStateOf((selectedColor.green * 255).toInt()) }
+    var blue by remember { mutableIntStateOf((selectedColor.blue * 255).toInt()) }
     var textColor by remember { mutableStateOf("$red, $green, $blue") }
     val accentColor = Color(0xFFFF6F9C)
 
