@@ -49,6 +49,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -422,7 +423,7 @@ fun CadastroScreen(navController: NavController) {
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Button(
                     onClick = {
                         navController.navigate("salas")
@@ -907,16 +908,27 @@ fun SalasScreen(navController: NavController) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester)
-                                    .onFocusChanged {
-                                        isTextFieldFocused = it.isFocused
-
-                                    }
                                     .focusable()
                                     .padding(start = 8.dp),
-                                textStyle = TextStyle(Color.Black)
+                                textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(R.font.lexend))),
+                                cursorBrush = SolidColor(Color(0xFFFF7094)),
+                                decorationBox = {innerTextField ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                    ){
+                                        if (searchText.isEmpty()){
+                                            Text(
+                                                text = "Digite aqui...",
+                                                color = Color(0xFFFF7094),
+                                                fontFamily = FontFamily(Font(R.font.lexend)),
+                                                modifier = Modifier.align(Alignment.CenterStart)
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
                             )
-
-
                         }
 
                         LaunchedEffect(isSearchExpanded) {
