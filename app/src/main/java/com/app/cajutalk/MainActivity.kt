@@ -4,11 +4,14 @@ import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Menu
@@ -40,12 +44,20 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -91,9 +103,9 @@ fun CajuTalkApp() {
             composable("cadastro") { CadastroScreen(navController) }
             composable("salas") { SalasScreen(navController) }
             composable("chat/{salaNome}/{salaCriador}/{salaImagem}") { backStackEntry ->
-                val salaNomeEncoded  = backStackEntry.arguments?.getString("salaNome")
-                val salaCriadorEncoded  = backStackEntry.arguments?.getString("salaCriador")
-                val salaImagemEncoded  = backStackEntry.arguments?.getString("salaImagem")
+                val salaNomeEncoded = backStackEntry.arguments?.getString("salaNome")
+                val salaCriadorEncoded = backStackEntry.arguments?.getString("salaCriador")
+                val salaImagemEncoded = backStackEntry.arguments?.getString("salaImagem")
 
                 if (salaNomeEncoded != null && salaCriadorEncoded != null && salaImagemEncoded != null) {
                     val salaNome = URLDecoder.decode(salaNomeEncoded, StandardCharsets.UTF_8.toString())
@@ -107,6 +119,7 @@ fun CajuTalkApp() {
         }
     }
 }
+
 
 @Composable
 fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
@@ -199,7 +212,7 @@ fun LoginScreen(navController: NavController) {
                     onValueChange = { username = it },
                     label = {
                         Text(
-                            text = "Nome de usuário",
+                            text = "Nome de ${mainUser.login}",
                             fontSize = 15.sp,
                             fontFamily = FontFamily(Font(R.font.lexend)),
                             fontWeight = FontWeight(700),
@@ -455,48 +468,83 @@ fun CadastroScreen(navController: NavController) {
 }
 
 @Composable
-fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
+fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
     var nomeSala by remember { mutableStateOf("") }
     var isPrivada by remember { mutableStateOf(false) }
     var senhaSala by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf(mainUser.imageUrl) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Criar Nova Sala", fontFamily = FontFamily(Font(R.font.baloo_bhai)))},
+        title = {
+            Text(
+                text = "Criar Nova Sala",
+                fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                fontSize = 22.sp,
+                color = Color(0xFFFF6F9C),
+                textAlign = TextAlign.Center
+            )
+        },
         text = {
-            Column {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier.size(120.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Imagem da Sala",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFDDC1)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    IconButton(
+                        onClick = { /* Implementar ação para escolher imagem */ },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFFF80AB), shape = CircleShape)
+                            .border(2.dp, Color.White, CircleShape)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.camera_icon),
+                            contentDescription = "Escolher imagem",
+                            tint = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = nomeSala,
                     onValueChange = { nomeSala = it },
                     label = {
-                        Text(text = "Nome da Sala", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFF08080))},
+                        Text(
+                            text = "Nome da Sala",
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            color = Color(0xFFF08080)
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFFF6F9C),
                         cursorColor = Color(0xFFFF6F9C)
-                    )
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Privada", fontFamily = FontFamily(Font(R.font.lexend)))
-                    Checkbox(checked = isPrivada, onCheckedChange = { isPrivada = it }, colors = CheckboxColors(
-                        checkedBoxColor = Color(0xFFFF7094),
-                        checkedBorderColor = Color(0xFFFF7094),
-                        checkedCheckmarkColor = Color.White,
-
-                        uncheckedBoxColor = Color.Transparent,
-                        uncheckedBorderColor = Color(0xFFFF7094),
-                        uncheckedCheckmarkColor = Color.Transparent,
-
-                        disabledCheckedBoxColor = Color(0xFFFFB3C1),
-                        disabledBorderColor = Color.Transparent,
-
-                        disabledUncheckedBoxColor = Color.Transparent,
-                        disabledUncheckedBorderColor = Color(0xFFFFB3C1),
-
-                        disabledIndeterminateBoxColor = Color(0xFFFFB3C1),
-                        disabledIndeterminateBorderColor = Color(0xFFFFB3C1)
-                    ))
+                    Checkbox(
+                        checked = isPrivada,
+                        onCheckedChange = { isPrivada = it },
+                        colors = CheckboxDefaults.colors(checkedColor = Color(0xFFFF7094))
+                    )
                 }
+
                 if (isPrivada) {
                     OutlinedTextField(
                         value = senhaSala,
@@ -506,7 +554,8 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFFFF6F9C),
                             cursorColor = Color(0xFFFF6F9C)
-                        )
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -517,25 +566,27 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit){
                 onClick = {
                     val novaSala = Sala(
                         nome = nomeSala,
-                        membros = "Usuário, ...",
+                        membros = "Usuário",
                         senha = if (isPrivada) senhaSala else "",
-                        imageUrl = mainUser.imageUrl,
+                        imageUrl = imageUrl,
                         mensagens = mutableListOf(),
                         criador = mainUser,
                     )
                     onCreate(novaSala)
                     onDismiss()
-                }
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Criar")
+                Text("Criar", color = Color.White)
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancelar")
+                Text("Cancelar", color = Color.White)
             }
         }
     )
@@ -546,6 +597,8 @@ fun SalaItem(sala: Sala, navController : NavController) {
     val salaNomeEncoded = URLEncoder.encode(sala.nome, StandardCharsets.UTF_8.toString())
     val salaCriadorEncoded = URLEncoder.encode(sala.criador.name, StandardCharsets.UTF_8.toString())
     val salaImagemEncoded = URLEncoder.encode(sala.imageUrl, StandardCharsets.UTF_8.toString())
+
+    Spacer(modifier = Modifier.height(16.dp))
 
     Row(
         modifier = Modifier
@@ -568,8 +621,48 @@ fun SalaItem(sala: Sala, navController : NavController) {
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
-            Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black)
-            Text(text = sala.membros, fontSize = 12.sp, color = Color.Gray)
+            Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = sala.membros, fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
+        }
+    }
+}
+
+@Composable
+fun MenuDropdown(navController: NavController) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        Icon(
+            imageVector = Icons.Filled.Menu,
+            contentDescription = "Menu",
+            tint = Color.White,
+            modifier = Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clickable { menuExpanded = true }
+        )
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+            modifier = Modifier.background(Color(0xE5FFFAFA))
+        ) {
+            DropdownMenuItem(
+                text = { Text(text = "Buscar Perfil", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFFF7094)) },
+                onClick = {
+                    menuExpanded = false
+                    navController.navigate("search-user")
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(text = "Sair", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFFF7094)) },
+                onClick = {
+                    menuExpanded = false
+                    // Adicione aqui a lógica para logout, por exemplo:
+                    // auth.signOut()
+                    navController.navigate("login")
+                }
+            )
         }
     }
 }
@@ -581,7 +674,7 @@ fun SalasScreen(navController: NavController) {
     var exibirPublicas by remember { mutableStateOf(false) }
     val headerSpace = 32.dp
     var mostrarDialogo by remember { mutableStateOf(false) }
-    val salasPublicas = remember {mutableStateListOf(
+    val salasExplorar = remember {mutableStateListOf(
         Sala(
             nome = "Exército de Dragões",
             membros = "Dragão, Dragãozão, Dragãozinho",
@@ -615,7 +708,7 @@ fun SalasScreen(navController: NavController) {
             criador = secondUser
         )
     )}
-    val salasPrivadas = remember {mutableStateListOf(
+    val salasUsuario = remember {mutableStateListOf(
         Sala(
             nome = "Exército de Sombras",
             membros = "Beru, Igris, Tusk, Iron",
@@ -633,9 +726,23 @@ fun SalasScreen(navController: NavController) {
             criador = mainUser
         )
     )}
-    val salasExibidas by remember {
+
+    var searchText by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    var isTextFieldFocused by remember { mutableStateOf(false) }
+    var isSearchExpanded by remember { mutableStateOf(false) }
+
+    val width by animateDpAsState(
+        targetValue = if (isSearchExpanded) 250.dp else 50.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "searchBarWidth"
+    )
+
+
+    val salasFiltradas by remember {
         derivedStateOf {
-            if (exibirPublicas) salasPublicas else salasPrivadas
+            val salas = if (exibirPublicas) salasExplorar else salasUsuario
+            salas.filter { it.nome.contains(searchText, ignoreCase = true) }
         }
     }
 
@@ -688,14 +795,7 @@ fun SalasScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.width(headerSpace))
 
-                Icon(
-                    imageVector = Icons.Filled.Menu,
-                    contentDescription = "Menu",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .size(40.dp)
-                )
+                MenuDropdown(navController)
             }
 
             Row(
@@ -780,21 +880,59 @@ fun SalasScreen(navController: NavController) {
                         CriarSalaDialog(
                             onDismiss = { mostrarDialogo = false },
                             onCreate = { sala ->
-                                salasPrivadas.add(sala)
+                                salasUsuario.add(sala)
                             }
                         )
                     }
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Pesquisar",
-                        tint = Color(0xFFFF7094)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { isSearchExpanded = !isSearchExpanded },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Pesquisar",
+                                tint = Color(0xFFFF7094)
+                            )
+                        }
+
+                        if (isSearchExpanded) {
+                            BasicTextField(
+                                value = searchText,
+                                onValueChange = { searchText = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged {
+                                        isTextFieldFocused = it.isFocused
+
+                                    }
+                                    .focusable()
+                                    .padding(start = 8.dp),
+                                textStyle = TextStyle(Color.Black)
+                            )
+
+
+                        }
+
+                        LaunchedEffect(isSearchExpanded) {
+                            if (isSearchExpanded) {
+                                focusRequester.requestFocus()
+                            } else {
+                                searchText = ""
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(6.dp))
 
                 LazyColumn {
-                    items(salasExibidas) { sala ->
+                    items(salasFiltradas) { sala ->
                         SalaItem(sala = sala, navController = navController)
                     }
                 }
@@ -830,6 +968,10 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
             Spacer(modifier = Modifier.width(8.dp))
         }
 
+        if(!isUserMessage && !showProfile){
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+
         Box(
             modifier = Modifier
                 .background(bubbleColor, shape)
@@ -846,12 +988,7 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
 }
 
 @Composable
-fun ChatScreen(
-    navController: NavController,
-    salaNome: String,
-    salaCriador: String?,
-    salaImagem: String?
-) {
+fun ChatScreen(navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
     val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
     var message by remember { mutableStateOf("") }
@@ -920,6 +1057,7 @@ fun ChatScreen(
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
                         color = Color(0xFFFF5313),
+                        lineHeight = 22.sp,
                     )
                     Text(
                         text = "Criada por: $salaCriador",
@@ -927,6 +1065,7 @@ fun ChatScreen(
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
                         color = Color(0xE5FFD670),
+                        modifier = Modifier.offset(y = (-12).dp)
                     )
                 }
                 Icon(
