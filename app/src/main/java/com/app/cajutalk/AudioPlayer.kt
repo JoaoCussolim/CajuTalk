@@ -30,6 +30,22 @@ class AudioPlayer {
         }
     }
 
+    fun getCurrentPosition(): Int {
+        return mediaPlayer?.currentPosition ?: 0
+    }
+
+    fun seekTo(positionMs: Long) {
+        mediaPlayer?.seekTo(positionMs.toInt())
+    }
+
+    fun setProgressListener(onProgress: (Int) -> Unit) {
+        mediaPlayer?.apply {
+            setOnSeekCompleteListener {
+                onProgress(currentPosition)
+            }
+        }
+    }
+
     private fun stopAudio() {
         mediaPlayer?.release()
         mediaPlayer = null

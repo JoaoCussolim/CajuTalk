@@ -6,14 +6,13 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,11 +45,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -58,7 +52,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -67,6 +60,7 @@ import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import kotlin.math.round
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -980,6 +974,21 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
     }
 }
 
+fun formatAudioDuration(durationMs: Long): String {
+    val totalSeconds = (durationMs / 1000).toInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
+}
+
+fun roundIfGreaterThanOrEqualToNine(value: Float): Int {
+    return if (value >= 0.9) {
+        kotlin.math.ceil(value).toInt()
+    } else {
+        value.toInt()
+    }
+}
+
 @Composable
 fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     val context = LocalContext.current
@@ -987,6 +996,8 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0f) }
     var duration by remember { mutableStateOf("00:00") }
+    var currentTime by remember { mutableStateOf("00:00") }
+    var totalDurationMs by remember { mutableStateOf(1L) } // Para evitar divisão por zero
 
     val isUserMessage = sender.login == mainUser.login
     val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
@@ -997,14 +1008,27 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     }
 
     LaunchedEffect(audioPath) {
-        delay(500)
+        progress = 0f
+        currentTime = "00:00"
         val file = File(audioPath)
         if (file.exists()) {
-            val mediaPlayer = MediaPlayer().apply { setDataSource(audioPath); prepare() }
-            duration = formatDuration(mediaPlayer.duration.toLong())
-            mediaPlayer.release()
-        } else {
-            println("AudioBubble, Arquivo de áudio não encontrado: $audioPath")
+            val mediaPlayer = MediaPlayer().apply {
+                setDataSource(audioPath)
+                prepare()
+                isPlaying = false
+            }
+            totalDurationMs = mediaPlayer.duration.toLong()
+            duration = formatAudioDuration(totalDurationMs)
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            audioPlayer.setProgressListener { currentPosition ->
+                currentTime = formatAudioDuration(currentPosition.toLong())
+
+                progress = currentPosition.toFloat() / totalDurationMs.toFloat()
+            }
         }
     }
 
@@ -1035,41 +1059,53 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
                 .padding(12.dp)
                 .wrapContentWidth()
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = {
-                        if (isPlaying) {
-                            audioPlayer.pauseAudio()
-                        } else {
-                            audioPlayer.playAudio(context, audioPath) { isPlaying = false }
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            if (isPlaying) {
+                                audioPlayer.pauseAudio()
+                            } else {
+                                if (roundIfGreaterThanOrEqualToNine(progress) >= 1) {
+                                    progress = 0f
+                                    audioPlayer.seekTo(0L)
+                                }
+                                println("Progresso $progress")
+                                audioPlayer.playAudio(context, audioPath) { isPlaying = false }
+
+                            }
+                            isPlaying = !isPlaying
                         }
-                        isPlaying = !isPlaying
+                    ) {
+                        Image(
+                            painter = if (isPlaying) painterResource(id = R.drawable.pause_audio_icon) else painterResource(id = R.drawable.play_audio_icon),
+                            contentDescription = if (isPlaying) "Pausar" else "Continuar",
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
-                ) {
-                    Image(
-                        painter = if (isPlaying) painterResource(id = R.drawable.pause_audio_icon) else painterResource(id = R.drawable.play_audio_icon),
-                        contentDescription = if (isPlaying) "Pausar" else "Continuar",
-                        modifier = Modifier.size(28.dp)
+
+                    Slider(
+                        value = progress,
+                        onValueChange = { newProgress ->
+                            progress = newProgress
+                            val newPositionMs = (newProgress * totalDurationMs).toLong()
+                            audioPlayer.seekTo(newPositionMs)
+                        },
+                        modifier = Modifier.weight(1f),
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color.White.copy(alpha = 0.8f),
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        )
                     )
                 }
 
-                Slider(
-                    value = progress,
-                    onValueChange = {},
-                    modifier = Modifier.weight(1f),
-                    valueRange = 0f..1f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White.copy(alpha = 0.8f),
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-
                 Text(
-                    text = duration,
+                    text = "$currentTime / $duration",
                     color = Color.White,
                     fontSize = 14.sp,
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
         }
@@ -1098,7 +1134,6 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
             messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", secondUser, "text"))
         }
     }
-
 
     Box(
         modifier = Modifier
@@ -1237,12 +1272,30 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                                 .size(50.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFFFF7090))
-                                .clickable {
-                                    if (message.isNotBlank()) {
-                                        sendMessage(message, mainUser, "text")
-                                        message = ""
-                                    } else {
-                                        if (isRecording) {
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            if (message.isNotBlank()) {
+                                                sendMessage(message, mainUser, "text")
+                                                message = ""
+                                            }
+                                        },
+                                        onPress = {
+                                            val pressStartTime = System.currentTimeMillis()
+                                            tryAwaitRelease()
+
+                                            val pressDuration  = System.currentTimeMillis() - pressStartTime
+                                            if (pressDuration >= 500L) {
+                                                if (viewModel.hasPermissions(context)) {
+                                                    viewModel.startRecording(context)
+                                                } else {
+                                                    activity?.let { viewModel.requestPermissions(it) }
+                                                }
+                                                isRecording = true
+                                            }
+
+                                            awaitRelease()
+
                                             viewModel.stopRecording()
                                             viewModel.audioPath?.let {
                                                 if (File(it).exists()) {
@@ -1251,15 +1304,9 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                                                     println("Arquivo de áudio não foi criado corretamente: $it")
                                                 }
                                             }
-                                        } else {
-                                            if (viewModel.hasPermissions(context)) {
-                                                viewModel.startRecording(context)
-                                            } else {
-                                                activity?.let { viewModel.requestPermissions(it) }
-                                            }
+                                            isRecording = false
                                         }
-                                        isRecording = !isRecording
-                                    }
+                                    )
                                 },
                             contentAlignment = Alignment.Center
                         ) {
