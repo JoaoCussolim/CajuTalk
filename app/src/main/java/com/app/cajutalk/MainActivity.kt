@@ -4,8 +4,13 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,9 +49,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -1010,25 +1017,33 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     LaunchedEffect(audioPath) {
         progress = 0f
         currentTime = "00:00"
+
         val file = File(audioPath)
-        if (file.exists()) {
-            val mediaPlayer = MediaPlayer().apply {
-                setDataSource(audioPath)
-                prepare()
-                isPlaying = false
+        if(!file.exists()){
+            println("Arquivo não encontrado: $audioPath")
+            return@LaunchedEffect
+        }
+        else {
+            val mediaPlayer = MediaPlayer()
+            try {
+                mediaPlayer.setDataSource(audioPath)
+                mediaPlayer.prepare()
+                totalDurationMs = mediaPlayer.duration.toLong()
+                duration = formatAudioDuration(totalDurationMs)
+            } catch (e: Exception) {
+                println("Erro ao carregar áudio: ${e.message}")
+            } finally {
+                mediaPlayer.release()
             }
-            totalDurationMs = mediaPlayer.duration.toLong()
-            duration = formatAudioDuration(totalDurationMs)
         }
     }
 
     LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            audioPlayer.setProgressListener { currentPosition ->
-                currentTime = formatAudioDuration(currentPosition.toLong())
-
-                progress = currentPosition.toFloat() / totalDurationMs.toFloat()
-            }
+        while (isPlaying) {
+            val position = audioPlayer.getCurrentPosition()
+            currentTime = formatAudioDuration(position.toLong())
+            progress = position.toFloat() / totalDurationMs.toFloat()
+            delay(100)
         }
     }
 
@@ -1063,18 +1078,16 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = {
+                            if (File(audioPath).exists()) {
                             if (isPlaying) {
                                 audioPlayer.pauseAudio()
                             } else {
-                                if (roundIfGreaterThanOrEqualToNine(progress) >= 1) {
-                                    progress = 0f
-                                    audioPlayer.seekTo(0L)
-                                }
-                                println("Progresso $progress")
                                 audioPlayer.playAudio(context, audioPath) { isPlaying = false }
-
                             }
                             isPlaying = !isPlaying
+                            } else{
+                                println("Arquivo de áudio não encontrado: $audioPath")
+                            }
                         }
                     ) {
                         Image(
@@ -1112,6 +1125,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
     val topColor = Color(0xFFFF9770)
@@ -1122,7 +1136,6 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
 
     val context = LocalContext.current
     val activity = context as? Activity
-    var isRecording by remember { mutableStateOf(false) }
 
     fun sendMessage(text: String, sender: User, messageType: String) {
         if (text.isBlank()) return
@@ -1267,54 +1280,95 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+
+                        var pressStartTime = System.currentTimeMillis()
+                        var recordingDuration by remember { mutableStateOf(0L) }
+                        var isRecording by remember { mutableStateOf(false) }
+
+                        val buttonSize by animateDpAsState(if (isRecording) 70.dp else 50.dp, animationSpec = tween(200))
+
+                        LaunchedEffect(isRecording) {
+                            while (isRecording) {
+                                delay(1000)
+                                recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(buttonSize)
                                 .clip(CircleShape)
                                 .background(Color(0xFFFF7090))
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            if (message.isNotBlank()) {
-                                                sendMessage(message, mainUser, "text")
-                                                message = ""
-                                            }
-                                        },
-                                        onPress = {
-                                            val pressStartTime = System.currentTimeMillis()
-                                            tryAwaitRelease()
-
-                                            val pressDuration  = System.currentTimeMillis() - pressStartTime
-                                            if (pressDuration >= 500L) {
-                                                if (viewModel.hasPermissions(context)) {
-                                                    viewModel.startRecording(context)
-                                                } else {
-                                                    activity?.let { viewModel.requestPermissions(it) }
-                                                }
-                                                isRecording = true
-                                            }
-
-                                            awaitRelease()
-
-                                            viewModel.stopRecording()
-                                            viewModel.audioPath?.let {
-                                                if (File(it).exists()) {
-                                                    sendMessage(it, mainUser, "audio")
-                                                } else {
-                                                    println("Arquivo de áudio não foi criado corretamente: $it")
-                                                }
-                                            }
+                                .pointerInteropFilter { event ->
+                                    when (event.action) {
+                                        MotionEvent.ACTION_DOWN -> {
+                                            pressStartTime = System.currentTimeMillis()
                                             isRecording = false
+
+                                            Handler(Looper.getMainLooper()).postDelayed({
+                                                if (System.currentTimeMillis() - pressStartTime >= 500L) {
+                                                    isRecording = true
+                                                    if (viewModel.hasPermissions(context)) {
+                                                        viewModel.startRecording(context)
+                                                    } else {
+                                                        activity?.let { viewModel.requestPermissions(it) }
+                                                    }
+                                                }
+                                            }, 500L)
+
+                                            true
                                         }
-                                    )
+
+                                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                            if (isRecording) {
+                                                isRecording = false
+                                                viewModel.stopRecording()
+                                                viewModel.audioPath?.let {
+                                                    if (File(it).exists() && File(it).length() > 0) {
+                                                        sendMessage(it, mainUser, "audio")
+                                                    } else {
+                                                        println("⚠️ Arquivo de áudio não foi criado corretamente: $it")
+                                                    }
+                                                }
+                                            } else {
+                                                if (message.isNotBlank()) {
+                                                    sendMessage(message, mainUser, "text")
+                                                    message = ""
+                                                }
+                                            }
+
+                                            isRecording = false
+                                            recordingDuration = 0L
+                                            true
+                                        }
+
+                                        else -> false
+                                    }
                                 },
                             contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = if (message.isNotBlank()) painterResource(id = R.drawable.send_icon) else painterResource(id = R.drawable.microfone_icon),
-                                contentDescription = if (message.isNotBlank()) "Enviar" else "Microfone",
-                                modifier = Modifier.size(28.dp)
-                            )
+                        )
+                        {
+                            if(isRecording) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "$recordingDuration s",
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+
+                                    Image(
+                                        painter = painterResource(id = R.drawable.microfone_icon),
+                                        contentDescription = "Microfone",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                } else {
+                                Image(
+                                    painter = if (message.isNotBlank()) painterResource(id = R.drawable.send_icon) else painterResource(id = R.drawable.microfone_icon),
+                                    contentDescription = if (message.isNotBlank()) "Enviar" else "Microfone",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
                         }
                     }
                 }

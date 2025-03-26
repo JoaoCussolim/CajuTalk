@@ -42,7 +42,7 @@ class AudioRecorderViewModel : ViewModel() {
                 throw Exception("Erro ao acessar o diretório de áudio")
             }
 
-            val file = File(dir, "audio_${System.currentTimeMillis()}.3gp")
+            val file = File(dir, "audio_${System.currentTimeMillis()}.mp4")
             audioPath = file.absolutePath
 
             mediaRecorder = MediaRecorder().apply {
