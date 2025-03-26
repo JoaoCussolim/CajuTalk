@@ -17,7 +17,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,12 +61,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
-import okhttp3.internal.concurrent.formatDuration
 import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import kotlin.math.round
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -981,19 +978,17 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
     }
 }
 
-fun formatAudioDuration(durationMs: Long): String {
+fun FormatAudioDuration(durationMs: Long): String {
     val totalSeconds = (durationMs / 1000).toInt()
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
 }
 
-fun roundIfGreaterThanOrEqualToNine(value: Float): Int {
-    return if (value >= 0.9) {
-        kotlin.math.ceil(value).toInt()
-    } else {
-        value.toInt()
-    }
+fun FormatAudioButtonDuration(seconds: Long): String {
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return "%02d:%02d".format(minutes, remainingSeconds)
 }
 
 @Composable
@@ -1029,7 +1024,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
                 mediaPlayer.setDataSource(audioPath)
                 mediaPlayer.prepare()
                 totalDurationMs = mediaPlayer.duration.toLong()
-                duration = formatAudioDuration(totalDurationMs)
+                duration = FormatAudioDuration(totalDurationMs)
             } catch (e: Exception) {
                 println("Erro ao carregar áudio: ${e.message}")
             } finally {
@@ -1041,7 +1036,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             val position = audioPlayer.getCurrentPosition()
-            currentTime = formatAudioDuration(position.toLong())
+            currentTime = FormatAudioDuration(position.toLong())
             progress = position.toFloat() / totalDurationMs.toFloat()
             delay(100)
         }
@@ -1281,16 +1276,23 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                         )
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        var pressStartTime = System.currentTimeMillis()
-                        var recordingDuration by remember { mutableStateOf(0L) }
+                        var pressStartTime by remember { mutableLongStateOf(0L) }
+                        var recordingDuration by remember { mutableLongStateOf(0L) }
                         var isRecording by remember { mutableStateOf(false) }
+                        var appearDuration by remember { mutableStateOf(false) }
 
-                        val buttonSize by animateDpAsState(if (isRecording) 70.dp else 50.dp, animationSpec = tween(200))
+                        val buttonSize by animateDpAsState(if (isRecording) 80.dp else 50.dp, animationSpec = tween(200))
 
                         LaunchedEffect(isRecording) {
-                            while (isRecording) {
-                                delay(1000)
-                                recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
+                            if (isRecording) {
+                                appearDuration = true
+                                while (isRecording) {
+                                    delay(1000)
+                                    recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
+                                }
+                            } else {
+                                appearDuration = false
+                                recordingDuration = 0L
                             }
                         }
 
@@ -1308,11 +1310,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                                             Handler(Looper.getMainLooper()).postDelayed({
                                                 if (System.currentTimeMillis() - pressStartTime >= 500L) {
                                                     isRecording = true
-                                                    if (viewModel.hasPermissions(context)) {
-                                                        viewModel.startRecording(context)
-                                                    } else {
-                                                        activity?.let { viewModel.requestPermissions(it) }
-                                                    }
+                                                    viewModel.startRecording(context)
                                                 }
                                             }, 500L)
 
@@ -1320,24 +1318,31 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                                         }
 
                                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                            val pressDuration = System.currentTimeMillis() - pressStartTime
+
                                             if (isRecording) {
                                                 isRecording = false
                                                 viewModel.stopRecording()
+
                                                 viewModel.audioPath?.let {
-                                                    if (File(it).exists() && File(it).length() > 0) {
+                                                    val file = File(it)
+                                                    if (file.exists() && file.length() > 0) {
                                                         sendMessage(it, mainUser, "audio")
                                                     } else {
-                                                        println("⚠️ Arquivo de áudio não foi criado corretamente: $it")
+                                                        println("⚠️ Arquivo de áudio inválido: $it")
                                                     }
                                                 }
-                                            } else {
+                                            } else if (pressDuration < 500L) {
                                                 if (message.isNotBlank()) {
                                                     sendMessage(message, mainUser, "text")
                                                     message = ""
                                                 }
                                             }
 
-                                            isRecording = false
+                                            Handler(Looper.getMainLooper()).postDelayed({
+                                                isRecording = false
+                                            }, 500L)
+
                                             recordingDuration = 0L
                                             true
                                         }
@@ -1348,10 +1353,10 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             contentAlignment = Alignment.Center
                         )
                         {
-                            if(isRecording) {
+                            if(isRecording && appearDuration) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        "$recordingDuration s",
+                                        FormatAudioButtonDuration(recordingDuration),
                                         color = Color.White,
                                         fontSize = 14.sp
                                     )
