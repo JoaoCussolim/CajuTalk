@@ -1,6 +1,8 @@
 package com.app.cajutalk
 
+import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -52,6 +54,7 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -59,6 +62,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import okhttp3.internal.concurrent.formatDuration
+import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -93,10 +98,10 @@ fun FocusClearContainer(content: @Composable () -> Unit) {
     }
 }
 
-
 @Composable
 fun CajuTalkApp() {
     val navController = rememberNavController()
+    val audioRecorderViewModel = AudioRecorderViewModel()
 
     FocusClearContainer{
         NavHost(navController, startDestination = "cadastro") {
@@ -113,7 +118,7 @@ fun CajuTalkApp() {
                     val salaCriador = URLDecoder.decode(salaCriadorEncoded, StandardCharsets.UTF_8.toString())
                     val salaImagem = URLDecoder.decode(salaImagemEncoded, StandardCharsets.UTF_8.toString())
 
-                    ChatScreen(navController, salaNome, salaCriador, salaImagem)
+                    ChatScreen(audioRecorderViewModel, navController, salaNome, salaCriador, salaImagem)
                 }
             }
             composable("user-profile") { UserProfileScreen(navController) }
@@ -189,7 +194,7 @@ fun LoginScreen(navController: NavController) {
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             modifier = Modifier
-                .fillMaxWidth(0.8f) // Deixa mais estreito
+                .fillMaxWidth(0.8f)
                 .align(Alignment.Center)
         ) {
             Column(
@@ -976,20 +981,121 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
 }
 
 @Composable
-fun ChatScreen(navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
+fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
+    val context = LocalContext.current
+    val audioPlayer = remember { AudioPlayer() }
+    var isPlaying by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(0f) }
+    var duration by remember { mutableStateOf("00:00") }
+
+    val isUserMessage = sender.login == mainUser.login
+    val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
+    val shape = if (isUserMessage) {
+        RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+    } else {
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+    }
+
+    LaunchedEffect(audioPath) {
+        delay(500)
+        val file = File(audioPath)
+        if (file.exists()) {
+            val mediaPlayer = MediaPlayer().apply { setDataSource(audioPath); prepare() }
+            duration = formatDuration(mediaPlayer.duration.toLong())
+            mediaPlayer.release()
+        } else {
+            println("AudioBubble, Arquivo de áudio não encontrado: $audioPath")
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        if (!isUserMessage && showProfile) {
+            AsyncImage(
+                model = sender.imageUrl,
+                contentDescription = "Foto de ${sender.name}",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        if(!isUserMessage && !showProfile){
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .background(bubbleColor, shape)
+                .padding(12.dp)
+                .wrapContentWidth()
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = {
+                        if (isPlaying) {
+                            audioPlayer.pauseAudio()
+                        } else {
+                            audioPlayer.playAudio(context, audioPath) { isPlaying = false }
+                        }
+                        isPlaying = !isPlaying
+                    }
+                ) {
+                    Image(
+                        painter = if (isPlaying) painterResource(id = R.drawable.pause_audio_icon) else painterResource(id = R.drawable.play_audio_icon),
+                        contentDescription = if (isPlaying) "Pausar" else "Continuar",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Slider(
+                    value = progress,
+                    onValueChange = {},
+                    modifier = Modifier.weight(1f),
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White.copy(alpha = 0.8f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    )
+                )
+
+                Text(
+                    text = duration,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
     val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
-    var message by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<Pair<String, User>>() }
 
-    fun sendMessage(text: String, sender: User) {
+    var message by remember { mutableStateOf("") }
+    val messages = remember { mutableStateListOf<Triple<String, User, String>>() }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+    var isRecording by remember { mutableStateOf(false) }
+
+    fun sendMessage(text: String, sender: User, messageType: String) {
         if (text.isBlank()) return
 
-        messages.add(text to sender)
+        messages.add(Triple(text, sender, messageType))
 
         if (sender == mainUser) {
-            messages.add("Vou te matar!" to secondUser)
-            messages.add("Ou você é o sung jin woo? \uD83D\uDE28" to secondUser)
+            messages.add(Triple("Vou te matar!", secondUser, "text"))
+            messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", secondUser, "text"))
         }
     }
 
@@ -1045,7 +1151,7 @@ fun ChatScreen(navController: NavController, salaNome: String, salaCriador: Stri
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
                         color = Color(0xFFFF5313),
-                        lineHeight = 22.sp,
+                        lineHeight = 24.sp,
                     )
                     Text(
                         text = "Criada por: $salaCriador",
@@ -1084,11 +1190,15 @@ fun ChatScreen(navController: NavController, salaNome: String, salaCriador: Stri
                     ) {
                         val reversedMessages = messages.reversed()
 
-                        itemsIndexed(reversedMessages) { index, (message, sender) ->
+                        itemsIndexed(reversedMessages) { index, (message, sender, messageType) ->
                             val nextSender = reversedMessages.getOrNull(index + 1)?.second
                             val showProfile = nextSender?.login != sender.login
 
-                            ChatBubble(message, sender, showProfile)
+                            if(messageType == "text"){
+                                ChatBubble(message, sender, showProfile)
+                            }else if (messageType == "audio"){
+                                AudioBubble(message, sender, showProfile)
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
@@ -1129,10 +1239,26 @@ fun ChatScreen(navController: NavController, salaNome: String, salaCriador: Stri
                                 .background(Color(0xFFFF7090))
                                 .clickable {
                                     if (message.isNotBlank()) {
-                                        sendMessage(message, mainUser)
+                                        sendMessage(message, mainUser, "text")
                                         message = ""
                                     } else {
-                                        // Lógica para gravar áudio
+                                        if (isRecording) {
+                                            viewModel.stopRecording()
+                                            viewModel.audioPath?.let {
+                                                if (File(it).exists()) {
+                                                    sendMessage(it, mainUser, "audio")
+                                                } else {
+                                                    println("Arquivo de áudio não foi criado corretamente: $it")
+                                                }
+                                            }
+                                        } else {
+                                            if (viewModel.hasPermissions(context)) {
+                                                viewModel.startRecording(context)
+                                            } else {
+                                                activity?.let { viewModel.requestPermissions(it) }
+                                            }
+                                        }
+                                        isRecording = !isRecording
                                     }
                                 },
                             contentAlignment = Alignment.Center
