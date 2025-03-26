@@ -729,16 +729,6 @@ fun SalasScreen(navController: NavController) {
     )}
 
     var searchText by remember { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
-    var isTextFieldFocused by remember { mutableStateOf(false) }
-    var isSearchExpanded by remember { mutableStateOf(false) }
-
-    val width by animateDpAsState(
-        targetValue = if (isSearchExpanded) 250.dp else 50.dp,
-        animationSpec = tween(durationMillis = 300),
-        label = "searchBarWidth"
-    )
-
 
     val salasFiltradas by remember {
         derivedStateOf {
@@ -890,54 +880,40 @@ fun SalasScreen(navController: NavController) {
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = { isSearchExpanded = !isSearchExpanded },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "Pesquisar",
-                                tint = Color(0xFFFF7094)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Pesquisar",
+                            tint = Color(0xFFFF7094),
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
 
-                        if (isSearchExpanded) {
-                            BasicTextField(
-                                value = searchText,
-                                onValueChange = { searchText = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .focusable()
-                                    .padding(start = 8.dp),
-                                textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(R.font.lexend))),
-                                cursorBrush = SolidColor(Color(0xFFFF7094)),
-                                decorationBox = {innerTextField ->
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                    ){
-                                        if (searchText.isEmpty()){
-                                            Text(
-                                                text = "Digite aqui...",
-                                                color = Color(0xFFFF7094),
-                                                fontFamily = FontFamily(Font(R.font.lexend)),
-                                                modifier = Modifier.align(Alignment.CenterStart)
-                                            )
-                                        }
-                                        innerTextField()
+                        BasicTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusable()
+                                .weight(1f)
+                                .padding(start = 8.dp),
+                            textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(R.font.lexend))),
+                            cursorBrush = SolidColor(Color(0xFFFF7094)),
+                            decorationBox = {innerTextField ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                ){
+                                    if (searchText.isEmpty()){
+                                        Text(
+                                            text = "Digite aqui...",
+                                            color = Color(0xFFFF7094),
+                                            fontFamily = FontFamily(Font(R.font.lexend)),
+                                            modifier = Modifier.align(Alignment.CenterStart)
+                                        )
                                     }
+                                    innerTextField()
                                 }
-                            )
-                        }
-
-                        LaunchedEffect(isSearchExpanded) {
-                            if (isSearchExpanded) {
-                                focusRequester.requestFocus()
-                            } else {
-                                searchText = ""
                             }
-                        }
+                        )
                     }
                 }
 
