@@ -76,8 +76,15 @@ class MainActivity : ComponentActivity() {
         } }
 }
 
-var mainUser = User(login = "Eba", senha = "Eba123", name = "Sung Jin Woo", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
-var secondUser = User(login = "InimigoDoEba", senha = "morraeba", name = "Antares", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
+var mainUser = User(login = "GoatJinWoo", senha = "AmoChaHaeIn", name = "Sung Jin Woo", message = "Amo meu exército", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
+var antares = User(login = "MonarcaDragoes", senha = "OdeioAshborn", name = "Antares", message = "Vou te matar Ashborn \uD83D\uDE21", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
+var igris = User(login = "AmoMestreJinWoo", senha = "SouMelhorQueBeru", name = "Igris", message = "Mestre Jin Woo é demais \uD83D\uDE0A", imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_ZqpS-yB9uKbBrwPatsuYcvnX9Emtbz5-gw&s")
+var beru = User(login = "AmoMaisMestreJinwoo", senha = "IgrisBuxa", name = "Beru", message = "Eu > Igris", imageUrl = "https://static.beebom.com/wp-content/uploads/2025/01/beru-solo-leveling.jpg?w=1250&quality=75")
+var chaHaeIn = User(login = "OlfatoRankS", senha = "ChaHae123", name = "Chae Hae-in", message = "O cheiro do Jin Woo é bom \uD83D\uDE33", imageUrl = "https://images4.alphacoders.com/139/1391416.png")
+var bellion = User(login = "SombraMaisForte", senha = "MorraAntares123", name = "Bellion", message = "Ashborn é absoluto.", imageUrl = "https://staticg.sportskeeda.com/editor/2024/02/a1b54-17071808977993-1920.jpg")
+
+val users = listOf(mainUser, antares,igris,beru,chaHaeIn,bellion)
+
 
 @Composable
 fun FocusClearContainer(content: @Composable () -> Unit) {
@@ -102,7 +109,7 @@ fun CajuTalkApp() {
     val audioRecorderViewModel = AudioRecorderViewModel()
 
     FocusClearContainer{
-        NavHost(navController, startDestination = "cadastro") {
+        NavHost(navController, startDestination = "search-user") {
             composable("login") { LoginScreen(navController) }
             composable("cadastro") { CadastroScreen(navController) }
             composable("salas") { SalasScreen(navController) }
@@ -120,10 +127,23 @@ fun CajuTalkApp() {
                 }
             }
             composable("user-profile") { UserProfileScreen(navController) }
+            composable("search-user") { SearchUserScreen(navController) }
+            composable("searched-user-profile/{userName}/{userMessage}/{userImageURL}") { backStackEntry ->
+                val userNameEncoded = backStackEntry.arguments?.getString("userName")
+                val userMessageEncoded = backStackEntry.arguments?.getString("userMessage")
+                val userImageURLEncoded = backStackEntry.arguments?.getString("userImageURL")
+
+                if (userNameEncoded != null && userMessageEncoded != null && userImageURLEncoded != null) {
+                    val userName = URLDecoder.decode(userNameEncoded, StandardCharsets.UTF_8.toString())
+                    val userMessage = URLDecoder.decode(userMessageEncoded, StandardCharsets.UTF_8.toString())
+                    val userImageURL = URLDecoder.decode(userImageURLEncoded, StandardCharsets.UTF_8.toString())
+
+                    SearchedUserProfileScreen(navController, userName, userMessage, userImageURL)
+                }
+            }
         }
     }
 }
-
 
 @Composable
 fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
@@ -685,7 +705,7 @@ fun SalasScreen(navController: NavController) {
             senha = "",
             imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
             mensagens = mutableListOf(),
-            criador = secondUser
+            criador = antares
         ),
         Sala(
             nome = "Exército de Pokémon",
@@ -693,7 +713,7 @@ fun SalasScreen(navController: NavController) {
             senha = "",
             imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
             mensagens = mutableListOf(),
-            criador = secondUser
+            criador = antares
         ),
         Sala(
             nome = "Exército de Banana",
@@ -701,7 +721,7 @@ fun SalasScreen(navController: NavController) {
             senha = "",
             imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
             mensagens = mutableListOf(),
-            criador = secondUser
+            criador = antares
         ),
         Sala(
             nome = "Exército Genérico",
@@ -709,7 +729,7 @@ fun SalasScreen(navController: NavController) {
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
             mensagens = mutableListOf(),
-            criador = secondUser
+            criador = antares
         )
     )}
     val salasUsuario = remember {mutableStateListOf(
@@ -1138,8 +1158,8 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
         messages.add(Triple(text, sender, messageType))
 
         if (sender == mainUser) {
-            messages.add(Triple("Vou te matar!", secondUser, "text"))
-            messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", secondUser, "text"))
+            messages.add(Triple("Vou te matar!", antares, "text"))
+            messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", antares, "text"))
         }
     }
 
@@ -1693,6 +1713,218 @@ fun UserProfileScreen(navController: NavController) {
 
                     Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(R.font.lexend)))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchedUserProfileItem(user: User, navController : NavController) {
+    val userNameEnconded = URLEncoder.encode(user.name, StandardCharsets.UTF_8.toString())
+    val userMessageEnconded = URLEncoder.encode(user.message, StandardCharsets.UTF_8.toString())
+    val userImageURLEncoded = URLEncoder.encode(user.imageUrl, StandardCharsets.UTF_8.toString())
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .padding(8.dp)
+            .background(color = Color(0xFFFFD670), shape = RoundedCornerShape(25.dp))
+            .clickable {navController.navigate("searched-user-profile/${userNameEnconded}/${userMessageEnconded}/${userImageURLEncoded}")},
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+        ) {
+            AsyncImage(
+                model = user.imageUrl,
+                contentDescription = "Ícone da Sala",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(text = user.name, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = user.login, fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
+        }
+    }
+}
+
+@Composable
+fun SearchUserScreen(navController: NavController) {
+    val backgroundColor = Color(0xFFFBE5B0)
+    val accentColor = Color(0xFFFF6F9C)
+    var search by remember { mutableStateOf("") }
+
+    val filteredUsers = users.filter {
+        it.name.contains(search, ignoreCase = true) || it.login.contains(search, ignoreCase = true)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = backgroundColor)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(color = backgroundColor)
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                    contentDescription = "Sair",
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(40.dp)
+                        .clickable { navController.navigate("salas") },
+                    tint = Color(0xFFFFAA80)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .background(color = Color(0xFFFFD670), shape = RoundedCornerShape(25.dp))
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Pesquisar",
+                        tint = accentColor,
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .background(color = Color(0xFFFFD670))
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    OutlinedTextField(
+                        value = search,
+                        onValueChange = { search = it },
+                        placeholder = { Text("Digite aqui...", color = accentColor) },
+                        shape = RoundedCornerShape(25.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent,
+                            cursorColor = accentColor,
+                            focusedContainerColor = Color(0xFFFFD670),
+                            unfocusedContainerColor = Color(0xFFFFD670),
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (filteredUsers.isEmpty()) {
+                Text(
+                    text = "Nenhum usuário encontrado",
+                    color = Color.Gray,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items(filteredUsers) { user ->
+                        SearchedUserProfileItem(user, navController)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchedUserProfileScreen(navController: NavController, userName: String, userMessage: String, userImageURL: String) {
+    val backgroundColor = Color(0xFFFBE5B0)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = backgroundColor)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            contentDescription = "Voltar",
+            modifier = Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clickable { navController.popBackStack() },
+            tint = Color(0xFFFFAA80)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = userName,
+                fontSize = 30.sp,
+                fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                fontWeight = FontWeight(700),
+                color = Color(0xFFFF9770)
+            )
+
+            AsyncImage(
+                model = userImageURL,
+                contentDescription = "Imagem do usuário",
+                modifier = Modifier
+                    .size(160.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFFDDC1)),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x9EFFFAFA)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .height(480.dp)
+                .align(alignment = Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Recado",
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                    fontWeight = FontWeight(400),
+                    color = Color(0xFFF08080),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = if(userMessage.isBlank()) "Nenhum recado disponível" else userMessage,
+                    fontSize = 18.sp,
+                    fontFamily = FontFamily(Font(R.font.lexend)),
+                    fontWeight = FontWeight(400),
+                    color = Color.Black
+                )
             }
         }
     }
