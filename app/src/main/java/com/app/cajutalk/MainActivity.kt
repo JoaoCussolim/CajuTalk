@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
         } }
 }
 
-var mainUser = User(login = "GoatJinWoo", senha = "AmoChaHaeIn", name = "Sung Jin Woo", message = "Amo meu exército", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
+var mainUser = User(login = "FakeDoAshborn", senha = "AmoChaHaeIn", name = "Sung Jin Woo", message = "Amo meu exército", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
 var antares = User(login = "MonarcaDragoes", senha = "OdeioAshborn", name = "Antares", message = "Vou te matar Ashborn \uD83D\uDE21", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
 var igris = User(login = "AmoMestreJinWoo", senha = "SouMelhorQueBeru", name = "Igris", message = "Mestre Jin Woo é demais \uD83D\uDE0A", imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_ZqpS-yB9uKbBrwPatsuYcvnX9Emtbz5-gw&s")
 var beru = User(login = "AmoMaisMestreJinwoo", senha = "IgrisBuxa", name = "Beru", message = "Eu > Igris", imageUrl = "https://static.beebom.com/wp-content/uploads/2025/01/beru-solo-leveling.jpg?w=1250&quality=75")
@@ -109,7 +109,7 @@ fun CajuTalkApp() {
     val audioRecorderViewModel = AudioRecorderViewModel()
 
     FocusClearContainer{
-        NavHost(navController, startDestination = "search-user") {
+        NavHost(navController, startDestination = "cadastro") {
             composable("login") { LoginScreen(navController) }
             composable("cadastro") { CadastroScreen(navController) }
             composable("salas") { SalasScreen(navController) }
@@ -1187,7 +1187,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     modifier = Modifier
                         .padding(vertical = 20.dp)
                         .size(62.dp)
-                        .clickable { navController.navigate("salas") },
+                        .clickable { navController.popBackStack() },
                     tint = Color(0xFFFF5313)
                 )
                 Box(
@@ -1552,7 +1552,7 @@ fun UserProfileScreen(navController: NavController) {
             modifier = Modifier
                 .padding(16.dp)
                 .size(40.dp)
-                .clickable { navController.navigate("salas") },
+                .clickable { navController.popBackStack() },
             tint = Color(0xFFFFAA80)
         )
 
@@ -1787,7 +1787,7 @@ fun SearchUserScreen(navController: NavController) {
                     modifier = Modifier
                         .padding(16.dp)
                         .size(40.dp)
-                        .clickable { navController.navigate("salas") },
+                        .clickable { navController.popBackStack() },
                     tint = Color(0xFFFFAA80)
                 )
 
@@ -1919,7 +1919,7 @@ fun SearchedUserProfileScreen(navController: NavController, userName: String, us
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if(userMessage.isBlank()) "Nenhum recado disponível" else userMessage,
+                    text = userMessage.ifBlank { "Nenhum recado disponível" },
                     fontSize = 18.sp,
                     fontFamily = FontFamily(Font(R.font.lexend)),
                     fontWeight = FontWeight(400),
