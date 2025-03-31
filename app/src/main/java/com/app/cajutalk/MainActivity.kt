@@ -1019,7 +1019,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     var progress by remember { mutableStateOf(0f) }
     var duration by remember { mutableStateOf("00:00") }
     var currentTime by remember { mutableStateOf("00:00") }
-    var totalDurationMs by remember { mutableStateOf(1L) } // Para evitar divisão por zero
+    var totalDurationMs by remember { mutableLongStateOf(1L) } // Para evitar divisão por zero
 
     val isUserMessage = sender.login == mainUser.login
     val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
@@ -1034,22 +1034,19 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
         currentTime = "00:00"
 
         val file = File(audioPath)
-        if(!file.exists()){
-            println("Arquivo não encontrado: $audioPath")
-            return@LaunchedEffect
-        }
-        else {
-            val mediaPlayer = MediaPlayer()
-            try {
-                mediaPlayer.setDataSource(audioPath)
-                mediaPlayer.prepare()
-                totalDurationMs = mediaPlayer.duration.toLong()
-                duration = formatAudioDuration(totalDurationMs)
-            } catch (e: Exception) {
-                println("Erro ao carregar áudio: ${e.message}")
-            } finally {
-                mediaPlayer.release()
+        val mediaPlayer = if (file.exists()) {
+            MediaPlayer().apply {
+                setDataSource(audioPath)
+                prepare()
             }
+        } else {
+            MediaPlayer.create(context, R.raw.antareskkkk)
+        }
+
+        mediaPlayer?.let {
+            totalDurationMs = it.duration.toLong()
+            duration = formatAudioDuration(totalDurationMs)
+            it.release()
         }
     }
 
@@ -1093,16 +1090,20 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = {
-                            if (File(audioPath).exists()) {
-                            if (isPlaying) {
-                                audioPlayer.pauseAudio()
+                            val file = File(audioPath)
+                            if (file.exists()) {
+                                if (isPlaying) {
+                                    audioPlayer.pauseAudio()
+                                } else {
+                                    audioPlayer.playAudio(context, audioPath) { isPlaying = false }
+                                }
+                            } else if (!isUserMessage) {
+                                audioPlayer.playRawAudio(context, R.raw.antareskkkk) { isPlaying = false }
                             } else {
-                                audioPlayer.playAudio(context, audioPath) { isPlaying = false }
-                            }
-                            isPlaying = !isPlaying
-                            } else{
                                 println("Arquivo de áudio não encontrado: $audioPath")
                             }
+
+                            isPlaying = !isPlaying
                         }
                     ) {
                         Image(
@@ -1140,6 +1141,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     }
 }
 
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
@@ -1161,6 +1163,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
     fun otherUserMessages(){
         messages.add(Triple("Vou te matar!", antares, "text"))
         messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", antares, "text"))
+        messages.add(Triple("", antares, "audio"))
     }
 
     Box(
@@ -1272,7 +1275,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { /* Lógica para anexos */ }) {
+                        IconButton(onClick = { otherUserMessages() }) {
                             Image(
                                 painter = painterResource(id = R.drawable.anexo_icon),
                                 contentDescription = "Anexo"
