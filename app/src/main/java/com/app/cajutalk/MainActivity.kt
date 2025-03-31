@@ -1141,7 +1141,6 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     }
 }
 
-
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
@@ -1778,11 +1777,20 @@ fun SearchUserScreen(navController: NavController) {
             .fillMaxSize()
             .background(color = backgroundColor)
     ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            contentDescription = "Sair",
+            modifier = Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clickable { navController.popBackStack() },
+            tint = Color(0xFFFFAA80)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(color = backgroundColor)
-                .padding(16.dp)
+                .padding(top = 60.dp, start = 16.dp, end = 16.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -1790,16 +1798,6 @@ fun SearchUserScreen(navController: NavController) {
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-                    contentDescription = "Sair",
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .size(40.dp)
-                        .clickable { navController.popBackStack() },
-                    tint = Color(0xFFFFAA80)
-                )
-
                 Row(
                     modifier = Modifier
                         .background(color = Color(0xFFFFD670), shape = RoundedCornerShape(25.dp))
