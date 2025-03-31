@@ -42,6 +42,23 @@ class AudioPlayer {
         }
     }
 
+    fun playRawAudio(context: Context, rawResId: Int, onCompletion: () -> Unit) {
+        stopAudio()
+
+        try {
+            mediaPlayer = MediaPlayer.create(context, rawResId).apply {
+                setOnCompletionListener {
+                    println("Reprodução concluída")
+                    onCompletion()
+                    stopAudio()
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            println("Erro ao reproduzir áudio raw: ${e.message}")
+        }
+    }
+
 
     fun pauseAudio() {
         mediaPlayer?.apply {
@@ -59,14 +76,6 @@ class AudioPlayer {
 
     fun getCurrentPosition(): Int {
         return mediaPlayer?.currentPosition ?: 0
-    }
-
-    fun setProgressListener(onProgress: (Int) -> Unit) {
-        mediaPlayer?.apply {
-            setOnSeekCompleteListener {
-                onProgress(currentPosition)
-            }
-        }
     }
 
     private fun stopAudio() {

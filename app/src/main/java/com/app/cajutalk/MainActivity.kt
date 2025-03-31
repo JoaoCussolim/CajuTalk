@@ -998,14 +998,14 @@ fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
     }
 }
 
-fun FormatAudioDuration(durationMs: Long): String {
+fun formatAudioDuration(durationMs: Long): String {
     val totalSeconds = (durationMs / 1000).toInt()
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
 }
 
-fun FormatAudioButtonDuration(seconds: Long): String {
+fun formatAudioButtonDuration(seconds: Long): String {
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
     return "%02d:%02d".format(minutes, remainingSeconds)
@@ -1044,7 +1044,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
                 mediaPlayer.setDataSource(audioPath)
                 mediaPlayer.prepare()
                 totalDurationMs = mediaPlayer.duration.toLong()
-                duration = FormatAudioDuration(totalDurationMs)
+                duration = formatAudioDuration(totalDurationMs)
             } catch (e: Exception) {
                 println("Erro ao carregar áudio: ${e.message}")
             } finally {
@@ -1056,7 +1056,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             val position = audioPlayer.getCurrentPosition()
-            currentTime = FormatAudioDuration(position.toLong())
+            currentTime = formatAudioDuration(position.toLong())
             progress = position.toFloat() / totalDurationMs.toFloat()
             delay(100)
         }
@@ -1156,11 +1156,11 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
         if (text.isBlank()) return
 
         messages.add(Triple(text, sender, messageType))
+    }
 
-        if (sender == mainUser) {
-            messages.add(Triple("Vou te matar!", antares, "text"))
-            messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", antares, "text"))
-        }
+    fun otherUserMessages(){
+        messages.add(Triple("Vou te matar!", antares, "text"))
+        messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", antares, "text"))
     }
 
     Box(
@@ -1329,8 +1329,14 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
 
                                             Handler(Looper.getMainLooper()).postDelayed({
                                                 if (System.currentTimeMillis() - pressStartTime >= 500L) {
-                                                    isRecording = true
-                                                    viewModel.startRecording(context)
+                                                    if(viewModel.hasPermissions(context)) {
+                                                        isRecording = true
+                                                        viewModel.startRecording(context)
+                                                    }else{
+                                                        if (activity != null) {
+                                                            viewModel.requestPermissions(activity)
+                                                        }
+                                                    }
                                                 }
                                             }, 500L)
 
@@ -1376,7 +1382,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             if(isRecording && appearDuration) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        FormatAudioButtonDuration(recordingDuration),
+                                        formatAudioButtonDuration(recordingDuration),
                                         color = Color.White,
                                         fontSize = 14.sp
                                     )
