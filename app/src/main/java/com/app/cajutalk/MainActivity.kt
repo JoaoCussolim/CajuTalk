@@ -60,6 +60,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
+import com.app.cajutalk.ui.theme.ACCENT_COLOR
+import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
+import com.app.cajutalk.ui.theme.BACK_ICON_TINT
+import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.ui.theme.WAVE_COLOR
 import kotlinx.coroutines.delay
 import java.io.File
 import java.net.URLDecoder
@@ -84,6 +89,7 @@ var chaHaeIn = User(login = "OlfatoRankS", senha = "ChaHae123", name = "Chae Hae
 var bellion = User(login = "SombraMaisForte", senha = "MorraAntares123", name = "Bellion", message = "Ashborn é absoluto.", imageUrl = "https://staticg.sportskeeda.com/editor/2024/02/a1b54-17071808977993-1920.jpg")
 
 val users = listOf(mainUser, antares,igris,beru,chaHaeIn,bellion)
+
 
 
 @Composable
@@ -170,11 +176,39 @@ fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun DefaultBackIcon(navController: NavController) {
+    Icon(
+        imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+        contentDescription = "Voltar",
+        modifier = Modifier
+            .padding(16.dp)
+            .size(40.dp)
+            .clickable { navController.popBackStack() },
+        tint = BACK_ICON_TINT
+    )
+}
+
+@Composable
+fun AuthHeader() {
+    Box(modifier = Modifier.fillMaxSize()) {
+        WaveBackground(color = WAVE_COLOR, modifier = Modifier.fillMaxSize())
+        Text(
+            text = "CajuTalk",
+            fontSize = 70.sp,
+            fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+            fontWeight = FontWeight(400),
+            color = Color(0xE5FFFAFA),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 60.dp)
+        )
+    }
+}
+
+@Composable
 fun LoginScreen(navController: NavController) {
     val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
-    val waveColor = Color(0xFFFFD670)
-    val accentColor = Color(0xFFFF6F9C)
     val highlightColor = Color(0xFFFF7D4C)
 
     var username by remember { mutableStateOf("") }
@@ -192,21 +226,7 @@ fun LoginScreen(navController: NavController) {
             )
     ) {
 
-        WaveBackground(
-            color = waveColor,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        Text(
-            text = "CajuTalk",
-            fontSize = 70.sp,
-            fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-            fontWeight = FontWeight(400),
-            color = Color(0xE5FFFAFA),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 60.dp)
-        )
+        AuthHeader()
 
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -236,7 +256,7 @@ fun LoginScreen(navController: NavController) {
                     onValueChange = { username = it },
                     label = {
                         Text(
-                            text = "Nome de ${mainUser.login}",
+                            text = "Nome de usuário",
                             fontSize = 15.sp,
                             fontFamily = FontFamily(Font(R.font.lexend)),
                             fontWeight = FontWeight(700),
@@ -245,8 +265,8 @@ fun LoginScreen(navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        cursorColor = accentColor
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
                     )
                 )
 
@@ -266,8 +286,8 @@ fun LoginScreen(navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        cursorColor = accentColor
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
                     ),
                     visualTransformation = PasswordVisualTransformation()
                 )
@@ -283,7 +303,7 @@ fun LoginScreen(navController: NavController) {
                         .height(45.dp),
 
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = accentColor,
+                        containerColor = ACCENT_COLOR,
                         contentColor = Color.White
                     )
                 ) {
@@ -308,7 +328,7 @@ fun LoginScreen(navController: NavController) {
                         text = "Cadastre-se",
                         fontSize = 15.sp,
                         fontFamily = FontFamily(Font(R.font.lexend)),
-                        color = accentColor,
+                        color = ACCENT_COLOR,
                         modifier = Modifier.clickable {
                             navController.navigate("cadastro")
                         }
@@ -692,6 +712,44 @@ fun MenuDropdown(navController: NavController) {
 }
 
 @Composable
+fun SalasHeader(navController: NavController) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+        ) {
+            AsyncImage(
+                model = mainUser.imageUrl,
+                contentDescription = "Ícone do Usuário",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { navController.navigate("user-profile") },
+                contentScale = ContentScale.Crop,
+            )
+        }
+        Spacer(modifier = Modifier.width(32.dp))
+        Text(
+            text = "CajuTalk",
+            fontSize = 40.sp,
+            fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+            fontWeight = FontWeight(400),
+            color = Color.White,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.width(32.dp))
+        MenuDropdown(navController)
+    }
+}
+
+@Composable
 fun SalasScreen(navController: NavController) {
     val topColor = Color(0xFFFF9770)
     val bottomColor = Color(0xFFFDB361)
@@ -775,42 +833,7 @@ fun SalasScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                ) {
-                    AsyncImage(
-                        model = mainUser.imageUrl,
-                        contentDescription = "Ícone do Usuário",
-                        modifier = Modifier.fillMaxSize().clickable{ navController.navigate("user-profile") },
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(headerSpace))
-
-                Text(
-                    text = "CajuTalk",
-                    fontSize = 40.sp,
-                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-                    fontWeight = FontWeight(400),
-                    color = Color(0xFFFFFFFF),
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.width(headerSpace))
-
-                MenuDropdown(navController)
-            }
+           SalasHeader(navController)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1764,8 +1787,6 @@ fun SearchedUserProfileItem(user: User, navController : NavController) {
 
 @Composable
 fun SearchUserScreen(navController: NavController) {
-    val backgroundColor = Color(0xFFFBE5B0)
-    val accentColor = Color(0xFFFF6F9C)
     var search by remember { mutableStateOf("") }
 
     val filteredUsers = users.filter {
@@ -1775,17 +1796,9 @@ fun SearchUserScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = backgroundColor)
+            .background(color = BACKGROUND_COLOR)
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-            contentDescription = "Sair",
-            modifier = Modifier
-                .padding(16.dp)
-                .size(40.dp)
-                .clickable { navController.popBackStack() },
-            tint = Color(0xFFFFAA80)
-        )
+        DefaultBackIcon(navController)
 
         Column(
             modifier = Modifier
@@ -1807,7 +1820,7 @@ fun SearchUserScreen(navController: NavController) {
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = "Pesquisar",
-                        tint = accentColor,
+                        tint = ACCENT_COLOR,
                         modifier = Modifier
                             .padding(start = 16.dp)
                             .background(color = Color(0xFFFFD670))
@@ -1818,12 +1831,12 @@ fun SearchUserScreen(navController: NavController) {
                     OutlinedTextField(
                         value = search,
                         onValueChange = { search = it },
-                        placeholder = { Text("Digite aqui...", color = accentColor) },
+                        placeholder = { Text("Digite aqui...", color = ACCENT_COLOR) },
                         shape = RoundedCornerShape(25.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = Color.Transparent,
                             focusedBorderColor = Color.Transparent,
-                            cursorColor = accentColor,
+                            cursorColor = ACCENT_COLOR,
                             focusedContainerColor = Color(0xFFFFD670),
                             unfocusedContainerColor = Color(0xFFFFD670),
                             focusedTextColor = Color.Black,
@@ -1859,48 +1872,41 @@ fun SearchUserScreen(navController: NavController) {
 }
 
 @Composable
-fun SearchedUserProfileScreen(navController: NavController, userName: String, userMessage: String, userImageURL: String) {
-    val backgroundColor = Color(0xFFFBE5B0)
+fun ProfileHeader(userName: String, userImageURL: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = userName,
+            fontSize = 30.sp,
+            fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+            fontWeight = FontWeight(700),
+            color = HEADER_TEXT_COLOR
+        )
+        AsyncImage(
+            model = userImageURL,
+            contentDescription = "Imagem do usuário",
+            modifier = Modifier
+                .size(160.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFFFDDC1)),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
 
+@Composable
+fun SearchedUserProfileScreen(navController: NavController, userName: String, userMessage: String, userImageURL: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = backgroundColor)
+            .background(color = BACKGROUND_COLOR)
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-            contentDescription = "Voltar",
-            modifier = Modifier
-                .padding(16.dp)
-                .size(40.dp)
-                .clickable { navController.popBackStack() },
-            tint = Color(0xFFFFAA80)
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = userName,
-                fontSize = 30.sp,
-                fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-                fontWeight = FontWeight(700),
-                color = Color(0xFFFF9770)
-            )
-
-            AsyncImage(
-                model = userImageURL,
-                contentDescription = "Imagem do usuário",
-                modifier = Modifier
-                    .size(160.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFDDC1)),
-                contentScale = ContentScale.Crop
-            )
-        }
+        DefaultBackIcon(navController)
+        ProfileHeader(userName, userImageURL)
 
         Card(
             shape = RoundedCornerShape(16.dp),
