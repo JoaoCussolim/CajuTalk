@@ -164,7 +164,7 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
                 onClick = {
                     val novaSala = Sala(
                         nome = nomeSala,
-                        membros = "Usuário",
+                        membros = listOf(mainUser),
                         senha = if (isPrivada) senhaSala else "",
                         imageUrl = imageUrl,
                         mensagens = mutableListOf(),
@@ -219,7 +219,7 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
         Spacer(modifier = Modifier.width(8.dp))
         Column {
             Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
-            Text(text = sala.membros, fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = sala.getMembrosToString(), fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
         }
     }
 }
@@ -311,7 +311,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         mutableStateListOf(
         Sala(
             nome = "Exército de Dragões",
-            membros = "Dragão, Dragãozão, Dragãozinho",
+            membros = listOf(antares),
             senha = "",
             imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
             mensagens = mutableListOf(),
@@ -319,7 +319,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         ),
         Sala(
             nome = "Exército de Pokémon",
-            membros = "Arceus, Pikachu, Charizard, Pichu",
+            membros = listOf(antares),
             senha = "",
             imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
             mensagens = mutableListOf(),
@@ -327,7 +327,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         ),
         Sala(
             nome = "Exército de Banana",
-            membros = "Bananão, Banana, Bananinha, Banano",
+            membros = listOf(antares),
             senha = "",
             imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
             mensagens = mutableListOf(),
@@ -335,7 +335,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         ),
         Sala(
             nome = "Exército Genérico",
-            membros = "Generico, Generica, Gene, Rico",
+            membros = listOf(antares),
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
             mensagens = mutableListOf(),
@@ -347,7 +347,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         mutableStateListOf(
         Sala(
             nome = "Exército de Sombras",
-            membros = "Beru, Igris, Tusk, Iron",
+            membros = listOf(mainUser, beru, igris, bellion),
             senha = "",
             imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
             mensagens = mutableListOf(),
@@ -355,7 +355,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         ),
         Sala(
             nome = "Exército de Lobisomens",
-            membros = "Lobisomem, Lobão, Lobimito, Lobo",
+            membros = listOf(mainUser),
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHCbqyj7ojzt5q9CAAWFsgHKf37qgqbQNReA&s",
             mensagens = mutableListOf(),
