@@ -20,9 +20,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
-import java.net.URLDecoder
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,10 +88,6 @@ fun DefaultBackIcon(navController: NavController) {
         tint = BACK_ICON_TINT
     )
 }
-
-fun encode(str: String): String = URLEncoder.encode(str, "UTF-8")
-
-fun decode(str: String): String = URLDecoder.decode(str, "UTF-8")
 
 @Composable
 @Preview
