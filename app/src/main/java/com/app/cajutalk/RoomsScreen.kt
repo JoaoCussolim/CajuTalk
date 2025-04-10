@@ -354,10 +354,10 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             criador = mainUser
         ),
         Sala(
-            nome = "Exército de Lobisomens",
-            membros = listOf(mainUser),
+            nome = "Exército Escondido \uD83D\uDE08",
+            membros = listOf(mainUser, chaHaeIn),
             senha = "",
-            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHCbqyj7ojzt5q9CAAWFsgHKf37qgqbQNReA&s",
+            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf3oWVeZdxwlFvz0usloJnSvUqR_xee4G6zQ&s",
             mensagens = mutableListOf(),
             criador = mainUser
         )
