@@ -46,11 +46,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 @Composable
-fun SearchedUserProfileItem(user: User, navController : NavController) {
-    val userNameEnconded = URLEncoder.encode(user.name, StandardCharsets.UTF_8.toString())
-    val userMessageEnconded = URLEncoder.encode(user.message, StandardCharsets.UTF_8.toString())
-    val userImageURLEncoded = URLEncoder.encode(user.imageUrl, StandardCharsets.UTF_8.toString())
-
+fun SearchedUserProfileItem(user: User, navController : NavController, dataViewModel: DataViewModel) {
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(
@@ -58,7 +54,10 @@ fun SearchedUserProfileItem(user: User, navController : NavController) {
             .fillMaxWidth(0.8f)
             .padding(8.dp)
             .background(color = WAVE_COLOR, shape = RoundedCornerShape(25.dp))
-            .clickable { navController.navigate("searched-user-profile/${userNameEnconded}/${userMessageEnconded}/${userImageURLEncoded}") },
+            .clickable {
+                dataViewModel.usuarioProcurado = user
+                navController.navigate("searched-user-profile")
+                       },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -83,7 +82,7 @@ fun SearchedUserProfileItem(user: User, navController : NavController) {
 }
 
 @Composable
-fun SearchUserScreen(navController: NavController) {
+fun SearchUserScreen(navController: NavController, dataViewModel: DataViewModel) {
     var search by remember { mutableStateOf("") }
 
     val filteredUsers = users.filter {
@@ -160,7 +159,7 @@ fun SearchUserScreen(navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     items(filteredUsers) { user ->
-                        SearchedUserProfileItem(user, navController)
+                        SearchedUserProfileItem(user, navController, dataViewModel)
                     }
                 }
             }

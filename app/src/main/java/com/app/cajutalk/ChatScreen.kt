@@ -269,7 +269,14 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, salaNome: String, salaCriador: String?, salaImagem: String?) {
+fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, roomViewModel: DataViewModel) {
+    val sala = roomViewModel.estadoSala.sala
+
+    if (sala == null) {
+        Text("Erro: sala não encontrada")
+        return
+    }
+
     val bottomColor = Color(0xFFFDB361)
 
     var message by remember { mutableStateOf("") }
@@ -330,7 +337,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                         .align(Alignment.CenterVertically)
                 ) {
                     AsyncImage(
-                        model = salaImagem,
+                        model = "${sala?.imageUrl}",
                         contentDescription = "Ícone da Sala",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -346,7 +353,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = salaNome,
+                        text = "${sala?.nome}",
                         fontSize = 30.sp,
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
@@ -355,7 +362,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     )
 
                     Text(
-                        text = "Criada por: $salaCriador",
+                        text = "Criada por: ${sala?.criador?.name}",
                         fontSize = 20.sp,
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),

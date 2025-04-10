@@ -58,14 +58,21 @@ fun ProfileHeader(userName: String, userImageURL: String) {
 }
 
 @Composable
-fun SearchedUserProfileScreen(navController: NavController, userName: String, userMessage: String, userImageURL: String) {
+fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataViewModel) {
+    val user = dataViewModel.usuarioProcurado
+
+    if (user == null) {
+        Text("Erro: usuário  não encontrado")
+        return
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(color = BACKGROUND_COLOR)
     ) {
         DefaultBackIcon(navController)
-        ProfileHeader(userName, userImageURL)
+        ProfileHeader(user.name, user.imageUrl)
 
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -91,7 +98,7 @@ fun SearchedUserProfileScreen(navController: NavController, userName: String, us
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = userMessage.ifBlank { "Nenhum recado disponível" },
+                    text = user.message.ifBlank { "Nenhum recado disponível" },
                     fontSize = 18.sp,
                     fontFamily = FontFamily(Font(R.font.lexend)),
                     fontWeight = FontWeight(400),

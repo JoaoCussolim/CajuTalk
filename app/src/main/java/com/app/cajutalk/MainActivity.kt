@@ -16,10 +16,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import java.net.URLDecoder
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
@@ -62,40 +64,17 @@ fun FocusClearContainer(content: @Composable () -> Unit) {
 fun CajuTalkApp() {
     val navController = rememberNavController()
     val audioRecorderViewModel = AudioRecorderViewModel()
+    val dataViewModel: DataViewModel = viewModel()
 
     FocusClearContainer{
         NavHost(navController, startDestination = "cadastro") {
             composable("login") { LoginScreen(navController) }
             composable("cadastro") { CadastroScreen(navController) }
-            composable("salas") { SalasScreen(navController) }
-            composable("chat/{salaNome}/{salaCriador}/{salaImagem}") { backStackEntry ->
-                val salaNomeEncoded = backStackEntry.arguments?.getString("salaNome")
-                val salaCriadorEncoded = backStackEntry.arguments?.getString("salaCriador")
-                val salaImagemEncoded = backStackEntry.arguments?.getString("salaImagem")
-
-                if (salaNomeEncoded != null && salaCriadorEncoded != null && salaImagemEncoded != null) {
-                    val salaNome = URLDecoder.decode(salaNomeEncoded, StandardCharsets.UTF_8.toString())
-                    val salaCriador = URLDecoder.decode(salaCriadorEncoded, StandardCharsets.UTF_8.toString())
-                    val salaImagem = URLDecoder.decode(salaImagemEncoded, StandardCharsets.UTF_8.toString())
-
-                    ChatScreen(audioRecorderViewModel, navController, salaNome, salaCriador, salaImagem)
-                }
-            }
+            composable("salas") { RoomsScreen(navController, dataViewModel) }
+            composable("chat") { ChatScreen(audioRecorderViewModel, navController, dataViewModel) }
             composable("user-profile") { UserProfileScreen(navController) }
-            composable("search-user") { SearchUserScreen(navController) }
-            composable("searched-user-profile/{userName}/{userMessage}/{userImageURL}") { backStackEntry ->
-                val userNameEncoded = backStackEntry.arguments?.getString("userName")
-                val userMessageEncoded = backStackEntry.arguments?.getString("userMessage")
-                val userImageURLEncoded = backStackEntry.arguments?.getString("userImageURL")
-
-                if (userNameEncoded != null && userMessageEncoded != null && userImageURLEncoded != null) {
-                    val userName = URLDecoder.decode(userNameEncoded, StandardCharsets.UTF_8.toString())
-                    val userMessage = URLDecoder.decode(userMessageEncoded, StandardCharsets.UTF_8.toString())
-                    val userImageURL = URLDecoder.decode(userImageURLEncoded, StandardCharsets.UTF_8.toString())
-
-                    SearchedUserProfileScreen(navController, userName, userMessage, userImageURL)
-                }
-            }
+            composable("search-user") { SearchUserScreen(navController, dataViewModel) }
+            composable("searched-user-profile") { SearchedUserProfileScreen(navController, dataViewModel) }
         }
     }
 }
@@ -112,6 +91,10 @@ fun DefaultBackIcon(navController: NavController) {
         tint = BACK_ICON_TINT
     )
 }
+
+fun encode(str: String): String = URLEncoder.encode(str, "UTF-8")
+
+fun decode(str: String): String = URLDecoder.decode(str, "UTF-8")
 
 @Composable
 @Preview

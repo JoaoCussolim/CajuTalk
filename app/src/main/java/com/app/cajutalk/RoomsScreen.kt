@@ -64,11 +64,9 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
-fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
+fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
     var nomeSala by remember { mutableStateOf("") }
     var isPrivada by remember { mutableStateOf(false) }
     var senhaSala by remember { mutableStateOf("") }
@@ -193,18 +191,17 @@ fun CriarSalaDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
 }
 
 @Composable
-fun SalaItem(sala: Sala, navController : NavController) {
-    val salaNomeEncoded = URLEncoder.encode(sala.nome, StandardCharsets.UTF_8.toString())
-    val salaCriadorEncoded = URLEncoder.encode(sala.criador.name, StandardCharsets.UTF_8.toString())
-    val salaImagemEncoded = URLEncoder.encode(sala.imageUrl, StandardCharsets.UTF_8.toString())
-
+fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewModel) {
     Spacer(modifier = Modifier.height(16.dp))
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable { navController.navigate("chat/${salaNomeEncoded}/${salaCriadorEncoded}/${salaImagemEncoded}") },
+            .clickable {
+                roomViewModel.estadoSala.sala = sala
+                navController.navigate("chat")
+                       },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -268,7 +265,7 @@ fun MenuDropdown(navController: NavController) {
 }
 
 @Composable
-fun SalasHeader(navController: NavController) {
+fun RoomsScreenHeader(navController: NavController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -306,10 +303,9 @@ fun SalasHeader(navController: NavController) {
 }
 
 @Composable
-fun SalasScreen(navController: NavController) {
+fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
-    val headerSpace = 32.dp
     var mostrarDialogo by remember { mutableStateOf(false) }
     val salasExplorar = remember {
         mutableStateListOf(
@@ -392,7 +388,7 @@ fun SalasScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            SalasHeader(navController)
+            RoomsScreenHeader(navController)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -474,7 +470,7 @@ fun SalasScreen(navController: NavController) {
                         )
                     }
                     if (mostrarDialogo) {
-                        CriarSalaDialog(
+                        CreateRoomDialog(
                             onDismiss = { mostrarDialogo = false },
                             onCreate = { sala ->
                                 salasUsuario.add(sala)
@@ -527,7 +523,7 @@ fun SalasScreen(navController: NavController) {
 
                 LazyColumn {
                     items(salasFiltradas) { sala ->
-                        SalaItem(sala = sala, navController = navController)
+                        RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel)
                     }
                 }
             }
