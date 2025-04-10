@@ -4,6 +4,9 @@ import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -64,7 +67,14 @@ fun CajuTalkApp() {
     val dataViewModel: DataViewModel = viewModel()
 
     FocusClearContainer{
-        NavHost(navController, startDestination = "cadastro") {
+        NavHost(
+            navController = navController,
+            startDestination = "cadastro",
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+            popExitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
             composable("login") { LoginScreen(navController) }
             composable("cadastro") { CadastroScreen(navController) }
             composable("salas") { RoomsScreen(navController, dataViewModel) }

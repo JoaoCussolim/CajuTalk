@@ -337,7 +337,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                         .align(Alignment.CenterVertically)
                 ) {
                     AsyncImage(
-                        model = "${sala?.imageUrl}",
+                        model = sala.imageUrl,
                         contentDescription = "Ícone da Sala",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -353,7 +353,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "${sala?.nome}",
+                        text = sala.nome,
                         fontSize = 30.sp,
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
@@ -362,7 +362,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     )
 
                     Text(
-                        text = "Criada por: ${sala?.criador?.name}",
+                        text = "Criada por: ${sala.criador.name}",
                         fontSize = 20.sp,
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                         fontWeight = FontWeight(400),
