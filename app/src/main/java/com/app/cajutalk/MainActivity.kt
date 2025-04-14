@@ -82,6 +82,7 @@ fun CajuTalkApp() {
             composable("user-profile") { UserProfileScreen(navController) }
             composable("search-user") { SearchUserScreen(navController, dataViewModel) }
             composable("searched-user-profile") { SearchedUserProfileScreen(navController, dataViewModel) }
+            composable("room-members") { RoomMembersScreen(navController, dataViewModel) }
         }
     }
 }

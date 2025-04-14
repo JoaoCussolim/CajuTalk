@@ -277,6 +277,8 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
         return
     }
 
+    roomViewModel.estadoSala.membros = sala.membros
+
     val bottomColor = Color(0xFFFDB361)
 
     var message by remember { mutableStateOf("") }
@@ -401,7 +403,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             },
                             onClick = {
                                 menuExpanded = false
-                                //verUsuariosDaSala()
+                                navController.navigate("room-members")
                             }
                         )
                         DropdownMenuItem(
