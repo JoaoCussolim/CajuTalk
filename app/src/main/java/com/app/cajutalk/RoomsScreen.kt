@@ -175,7 +175,7 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Criar", color = Color.White)
+                Text("Criar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
             }
         },
         dismissButton = {

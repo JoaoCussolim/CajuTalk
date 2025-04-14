@@ -1,9 +1,13 @@
 package com.app.cajutalk
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +34,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -41,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -197,9 +203,40 @@ fun ColorPickerButton(selectedColor: Color, onColorSelected: (Color) -> Unit) {
 @Composable
 fun UserProfileScreen(navController: NavController) {
     val accentColor = Color(0xFFFF6F9C)
-    var name by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(mainUser.name) }
+    var message by remember { mutableStateOf(mainUser.message) }
     var selectedColor by remember { mutableStateOf(Color.White) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+    var stringSelectedImageUri by remember { mutableStateOf(mainUser.imageUrl) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+        stringSelectedImageUri = uri.toString()
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(text = "Descartar alterações?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+            text = { Text(text = "Você tem alterações não salvas. Deseja sair mesmo assim?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDialog = false
+                    navController.popBackStack()
+                }) {
+                    Text(text = "Sair sem salvar", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(text = "Cancelar", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR)
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -212,7 +249,13 @@ fun UserProfileScreen(navController: NavController) {
             modifier = Modifier
                 .padding(16.dp)
                 .size(40.dp)
-                .clickable { navController.popBackStack() },
+                .clickable {
+                    if(message == mainUser.message && name == mainUser.name && stringSelectedImageUri == mainUser.imageUrl){
+                        navController.popBackStack()
+                    }else{
+                        showDialog = true
+                    }
+                           },
             tint = BACK_ICON_TINT
         )
 
@@ -236,7 +279,7 @@ fun UserProfileScreen(navController: NavController) {
                 contentAlignment = Alignment.BottomEnd
             ) {
                 AsyncImage(
-                    model = mainUser.imageUrl,
+                    model = selectedImageUri ?: mainUser.imageUrl,
                     contentDescription = "Ícone do Usuário",
                     modifier = Modifier
                         .size(160.dp)
@@ -246,7 +289,7 @@ fun UserProfileScreen(navController: NavController) {
                 )
 
                 IconButton(
-                    onClick = { /* Ação para trocar a imagem */ },
+                    onClick = {  imagePickerLauncher.launch("image/*") },
                     modifier = Modifier
                         .size(60.dp)
                         .background(Color(0xFFFF80AB), shape = CircleShape)
@@ -364,6 +407,7 @@ fun UserProfileScreen(navController: NavController) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     ColorPickerButton(selectedColor) { newColor ->
                         selectedColor = newColor
@@ -372,6 +416,20 @@ fun UserProfileScreen(navController: NavController) {
                     Spacer(modifier = Modifier.width(18.dp))
 
                     Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(R.font.lexend)))
+
+                    Spacer(modifier = Modifier.width(32.dp))
+
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                        onClick = {
+                            mainUser.message = message
+                            mainUser.name = name
+                            mainUser.imageUrl = stringSelectedImageUri
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Salvar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
+                    }
                 }
             }
         }
