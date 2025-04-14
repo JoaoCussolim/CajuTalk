@@ -1,12 +1,23 @@
 package com.app.cajutalk
 
 import android.app.Activity
+import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import android.view.MotionEvent
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +31,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +41,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -46,6 +60,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,14 +81,25 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
 import kotlinx.coroutines.delay
 import java.io.File
+import java.io.FileOutputStream
+import java.time.LocalDateTime
+
+typealias ConteudoChat = Triple<Mensagem, User, String>
 
 @Composable
 fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
@@ -140,7 +167,7 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     val context = LocalContext.current
     val audioPlayer = remember { AudioPlayer() }
     var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableStateOf(0f) }
+    var progress by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableStateOf("00:00") }
     var currentTime by remember { mutableStateOf("00:00") }
     var totalDurationMs by remember { mutableLongStateOf(1L) } // Para evitar divisão por zero
@@ -267,6 +294,287 @@ fun AudioBubble(audioPath: String, sender: User, showProfile: Boolean) {
     }
 }
 
+fun salvarArquivo(context: Context, uri: Uri, nome: String) {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+    val outFile = File(downloadDir, nome)
+
+    inputStream?.use { input ->
+        FileOutputStream(outFile).use { output ->
+            input.copyTo(output)
+        }
+    }
+
+    Toast.makeText(context, "Arquivo salvo em: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+}
+
+@Composable
+fun FileBubble(arquivo: Mensagem, sender: User, showProfile: Boolean, onDownloadClick: (Uri) -> Unit) {
+    val isUserMessage = sender.login == mainUser.login
+    val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
+    val shape = if (isUserMessage) {
+        RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+    } else {
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        if (!isUserMessage && showProfile) {
+            AsyncImage(
+                model = sender.imageUrl,
+                contentDescription = "Foto de ${sender.name}",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        if (!isUserMessage && !showProfile) {
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .background(bubbleColor, shape)
+                .padding(12.dp)
+                .wrapContentWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.widthIn(max = 240.dp)
+            ) {
+                Icon(
+                    painter =  painterResource(id = R.drawable.description_icon),
+                    contentDescription = "Arquivo",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = arquivo.nomeArquivo,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = {
+                    arquivo.uriArquivo?.let { onDownloadClick(it) }
+                }) {
+                    Icon(
+                        painter =  painterResource(id = R.drawable.download_icon),
+                        contentDescription = "Baixar",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+fun getFileNameFromUri(context: Context, uri: Uri): String {
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    return cursor?.use {
+        val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        it.moveToFirst()
+        it.getString(nameIndex)
+    } ?: "arquivo"
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ImageContainer(
+    imageUri: Uri,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    maxHeight: Dp = 240.dp,
+    isUserMessage: Boolean,
+) {
+    val borderColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
+    var showFullScreen by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Card(
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, borderColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            modifier = modifier
+                .wrapContentSize()
+                .sizeIn(maxHeight = maxHeight)
+                .clickable { showFullScreen = true }
+        ) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Fit, // mantém proporção e centraliza
+                modifier = Modifier
+                    .wrapContentSize()
+                    .padding(4.dp)
+            )
+        }
+
+        if (showFullScreen) {
+            Dialog(onDismissRequest = { showFullScreen = false }) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                ) {
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = contentDescription,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .align(Alignment.Center)
+                    )
+                    IconButton(
+                        onClick = { showFullScreen = false },
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .size(36.dp)
+                            .align(Alignment.TopStart)
+                            .background(
+                                color = Color(0x66000000),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(4.dp))
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun VideoPreview(
+    videoUri: Uri,
+    modifier: Modifier = Modifier,
+    maxWidth: Dp = 240.dp,
+    maxHeight: Dp = 240.dp,
+    isUserMessage: Boolean
+) {
+    val borderColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
+    var showFullScreen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUri))
+            prepare()
+            playWhenReady = false
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Card(
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, borderColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            modifier = modifier
+                .wrapContentSize()
+                .sizeIn(maxWidth = maxWidth, maxHeight = maxHeight)
+                .clickable { showFullScreen = true }
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .wrapContentSize()
+                    .padding(4.dp)
+            )
+        }
+    }
+
+    if (showFullScreen) {
+        Dialog(onDismissRequest = {
+            showFullScreen = false
+            exoPlayer.release()
+        }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            player = exoPlayer
+                            useController = true
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                )
+
+                IconButton(
+                    onClick = { showFullScreen = false },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(36.dp)
+                        .align(Alignment.TopStart)
+                        .background(
+                            color = Color(0x66000000),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(4.dp))
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, roomViewModel: DataViewModel) {
@@ -282,7 +590,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
     val bottomColor = Color(0xFFFDB361)
 
     var message by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<Triple<String, User, String>>() }
+    val messages = remember { mutableStateListOf<ConteudoChat>() }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var showAlertDialog by remember { mutableStateOf(false) }
@@ -290,16 +598,24 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
     val context = LocalContext.current
     val activity = context as? Activity
 
-    fun sendMessage(text: String, sender: User, messageType: String) {
-        if (text.isBlank()) return
-
-        messages.add(Triple(text, sender, messageType))
+    fun sendMessage(conteudo: Mensagem, sender: User, tipo: String) {
+        messages.add(Triple(conteudo, sender, tipo))
     }
 
-    fun otherUserMessages(){
-        messages.add(Triple("Vou te matar!", antares, "text"))
-        messages.add(Triple("Ou você é o sung jin woo? \uD83D\uDE28", antares, "text"))
-        messages.add(Triple("", antares, "audio"))
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val nomeArquivo = getFileNameFromUri(context, it)
+            val mensagem = Mensagem(
+                texto = "", // não tem texto
+                nomeArquivo = nomeArquivo,
+                uriArquivo = it,
+                isUser = true,
+                data = LocalDateTime.now()
+            )
+            sendMessage(mensagem, mainUser, "file")
+        }
     }
 
     Box(
@@ -425,8 +741,9 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                         AlertDialog(
                             onDismissRequest = { showAlertDialog = false },
                             title = { Text("Excluir sala",
-                                fontFamily = FontFamily(Font(R.font.lexend))) },
-                            text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(R.font.lexend))) },
+                                fontFamily = FontFamily(Font(R.font.lexend)),
+                                color = ACCENT_COLOR) },
+                            text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
                             confirmButton = {
                                 TextButton(
                                     onClick = {
@@ -472,17 +789,40 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                     ) {
                         val reversedMessages = messages.reversed()
 
-                        itemsIndexed(reversedMessages) { index, (message, sender, messageType) ->
-                            val nextSender = reversedMessages.getOrNull(index + 1)?.second
-                            val showProfile = nextSender?.login != sender.login
+                        itemsIndexed(reversedMessages) { idx, (mensagem, sender, tipo) ->
+                            val next = reversedMessages.getOrNull(idx + 1)?.second
+                            val showProfile = next?.login != sender.login
 
-                            if(messageType == "text"){
-                                ChatBubble(message, sender, showProfile)
-                            }else if (messageType == "audio"){
-                                AudioBubble(message, sender, showProfile)
+                            if (tipo == "file") {
+                                val mime = context.contentResolver.getType(mensagem.uriArquivo!!)
+                                if (mime?.startsWith("image") == true) {
+                                    ImageContainer(
+                                        imageUri = mensagem.uriArquivo,
+                                        contentDescription = mensagem.nomeArquivo,
+                                        isUserMessage = mensagem.isUser
+                                    )
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                } else if (mime?.startsWith("video") == true){
+                                    VideoPreview(videoUri = mensagem.uriArquivo, isUserMessage = mensagem.isUser)
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                } else {
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                }
+                            } else if (tipo == "text") {
+                                ChatBubble(mensagem.texto, sender, showProfile)
+                            } else if (tipo == "audio") {
+                                AudioBubble(mensagem.texto, sender, showProfile)
                             }
+
                             Spacer(modifier = Modifier.height(8.dp))
                         }
+
                     }
 
                     Row(
@@ -491,7 +831,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { otherUserMessages() }) {
+                        IconButton(onClick = { filePickerLauncher.launch("*/*") }) {
                             Image(
                                 painter = painterResource(id = R.drawable.anexo_icon),
                                 contentDescription = "Anexo"
@@ -573,14 +913,26 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                                                 viewModel.audioPath?.let {
                                                     val file = File(it)
                                                     if (file.exists() && file.length() > 0) {
-                                                        sendMessage(it, mainUser, "audio")
+                                                        sendMessage( Mensagem(
+                                                            texto = it,
+                                                            nomeArquivo = "",
+                                                            uriArquivo = null,
+                                                            isUser = true,
+                                                            data = LocalDateTime.now()
+                                                        ), mainUser, "audio")
                                                     } else {
                                                         println("⚠️ Arquivo de áudio inválido: $it")
                                                     }
                                                 }
                                             } else if (pressDuration < 500L) {
                                                 if (message.isNotBlank()) {
-                                                    sendMessage(message, mainUser, "text")
+                                                    sendMessage( Mensagem(
+                                                        texto = message,
+                                                        nomeArquivo = "",
+                                                        uriArquivo = null,
+                                                        isUser = true,
+                                                        data = LocalDateTime.now()
+                                                    ), mainUser, "text")
                                                     message = ""
                                                 }
                                             }

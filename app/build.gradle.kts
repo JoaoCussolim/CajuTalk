@@ -41,6 +41,7 @@ android {
 
 dependencies {
     implementation(libs.gson)
+    implementation (libs.exoplayer)
     implementation(libs.coil.compose)
     implementation(libs.material3)
     implementation(libs.androidx.navigation.compose)
@@ -52,6 +53,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

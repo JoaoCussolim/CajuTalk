@@ -1,5 +1,6 @@
 package com.app.cajutalk
 
-import java.util.Date
+import android.net.Uri
+import java.time.LocalDateTime
 
-data class Mensagem(val info: String, val sender: String, val data: Date)
+data class Mensagem(val texto: String, val nomeArquivo: String, val uriArquivo: Uri?, val isUser: Boolean, val data: LocalDateTime)

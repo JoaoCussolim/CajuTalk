@@ -3,6 +3,7 @@ accompanistNavigationAnimation = "0.34.0"
 agp = "8.8.2"
 coilCompose = "2.2.2"
 colorpickerCompose = "2.0.0"
+exoplayer = "2.19.1"
 gson = "2.10.1"
 kotlin = "2.0.0"
 coreKtx = "1.15.0"
@@ -14,6 +15,8 @@ activityCompose = "1.10.1"
 composeBom = "2024.04.01"
 material3 = "1.3.1"
 navigationCompose = "2.8.9"
+media3Exoplayer = "1.6.0"
+media3Ui = "1.6.0"
 
 [libraries]
 accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanistNavigationAnimation" }
@@ -21,6 +24,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 colorpicker-compose = { module = "me.saket.colorpickerview:colorpicker-compose", version.ref = "colorpickerCompose" }
+exoplayer = { module = "com.google.android.exoplayer:exoplayer", version.ref = "exoplayer" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -36,6 +40,8 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Ui" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
