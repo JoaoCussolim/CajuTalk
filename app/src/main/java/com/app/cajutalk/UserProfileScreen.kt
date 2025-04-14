@@ -213,8 +213,10 @@ fun UserProfileScreen(navController: NavController) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        selectedImageUri = uri
-        stringSelectedImageUri = uri.toString()
+        if(uri != null){
+            selectedImageUri = uri
+            stringSelectedImageUri = uri.toString()
+        }
     }
 
     if (showDialog) {
@@ -266,7 +268,7 @@ fun UserProfileScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Olá, Usuário",
+                text = "Olá, ${mainUser.login}",
                 fontSize = 30.sp,
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontWeight = FontWeight(700),

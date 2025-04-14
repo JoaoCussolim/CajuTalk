@@ -1,5 +1,8 @@
 package com.app.cajutalk
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,6 +74,16 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
     var isPrivada by remember { mutableStateOf(false) }
     var senhaSala by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf(mainUser.imageUrl) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if(uri != null) {
+            selectedImageUri = uri
+            imageUrl = uri.toString()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -90,7 +103,7 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
                     contentAlignment = Alignment.BottomEnd
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = selectedImageUri ?: imageUrl,
                         contentDescription = "Imagem da Sala",
                         modifier = Modifier
                             .size(120.dp)
@@ -100,7 +113,7 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
                     )
 
                     IconButton(
-                        onClick = { /* Implementar ação para escolher imagem */ },
+                        onClick = { imagePickerLauncher.launch("image/*") },
                         modifier = Modifier
                             .size(40.dp)
                             .background(Color(0xFFFF80AB), shape = CircleShape)
@@ -165,10 +178,11 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
                     val novaSala = Sala(
                         nome = nomeSala,
                         membros = listOf(mainUser),
-                        senha = if (isPrivada) senhaSala else "",
+                        senha = senhaSala,
                         imageUrl = imageUrl,
                         mensagens = mutableListOf(),
                         criador = mainUser,
+                        privado = isPrivada
                     )
                     onCreate(novaSala)
                     onDismiss()
@@ -191,8 +205,97 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
 }
 
 @Composable
+fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavController, onDismiss: () -> Unit) {
+    var senhaSala by remember { mutableStateOf("") }
+    var senhaIncorreta by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.nome}",
+                fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                fontSize = 22.sp,
+                color = ACCENT_COLOR,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (senhaIncorreta) {
+                    Text(
+                        text = "Senha incorreta. Tente novamente.",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily(Font(R.font.lexend)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                OutlinedTextField(
+                    value = senhaSala,
+                    onValueChange = {
+                        senhaSala = it
+                        senhaIncorreta = false // limpa o erro quando começa a digitar novamente
+                    },
+                    label = { Text(text = "Senha", color = Color(0xFFF08080)) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                onClick = {
+                    if (senhaSala == roomViewModel.estadoSala.sala?.senha) {
+                        navController.navigate("chat")
+                        onDismiss()
+                    } else {
+                        senhaIncorreta = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Entrar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancelar", color = Color.White)
+            }
+        }
+    )
+}
+
+@Composable
 fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewModel) {
+    var mostrarDialogo by remember { mutableStateOf(false) }
+
     Spacer(modifier = Modifier.height(16.dp))
+
+    if(mostrarDialogo) {
+        EnterPrivateRoomDialog(
+            roomViewModel,
+            navController,
+            onDismiss = { mostrarDialogo = false },
+        )
+    }
 
     Row(
         modifier = Modifier
@@ -200,8 +303,12 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
             .padding(8.dp)
             .clickable {
                 roomViewModel.estadoSala.sala = sala
-                navController.navigate("chat")
-                       },
+                if(sala.privado == true){
+                    mostrarDialogo = true
+                }else{
+                    navController.navigate("chat")
+                }
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -217,6 +324,7 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
+
         Column {
             Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
             Text(text = sala.getMembrosToString(), fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
@@ -315,7 +423,8 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             senha = "",
             imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
             mensagens = mutableListOf(),
-            criador = antares
+            criador = antares,
+            privado = false,
         ),
         Sala(
             nome = "Exército de Pokémon",
@@ -323,7 +432,8 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             senha = "",
             imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
             mensagens = mutableListOf(),
-            criador = antares
+            criador = antares,
+            privado = false,
         ),
         Sala(
             nome = "Exército de Banana",
@@ -331,7 +441,8 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             senha = "",
             imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
             mensagens = mutableListOf(),
-            criador = antares
+            criador = antares,
+            privado = false,
         ),
         Sala(
             nome = "Exército Genérico",
@@ -339,7 +450,8 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             senha = "",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
             mensagens = mutableListOf(),
-            criador = antares
+            criador = antares,
+            privado = false,
         )
     )
     }
@@ -351,15 +463,17 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
             senha = "",
             imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
             mensagens = mutableListOf(),
-            criador = mainUser
+            criador = mainUser,
+            privado = false,
         ),
         Sala(
             nome = "Exército Escondido \uD83D\uDE08",
             membros = listOf(mainUser, chaHaeIn),
-            senha = "",
+            senha = "amor123",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf3oWVeZdxwlFvz0usloJnSvUqR_xee4G6zQ&s",
             mensagens = mutableListOf(),
-            criador = mainUser
+            criador = mainUser,
+            privado = true,
         )
     )
     }

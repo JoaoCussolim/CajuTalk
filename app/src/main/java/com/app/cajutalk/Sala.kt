@@ -8,7 +8,8 @@ data class Sala(
     val senha: String,
     val imageUrl: String,
     val mensagens: List<Mensagem>,
-    val criador: User
+    val criador: User,
+    var privado: Boolean?,
 ) : Serializable {
 
     fun getMembrosToString(): String {
