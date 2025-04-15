@@ -775,7 +775,7 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
 
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xE5FFFAFA)),
+                colors = CardDefaults.cardColors(containerColor = chatBackgroundColor),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)

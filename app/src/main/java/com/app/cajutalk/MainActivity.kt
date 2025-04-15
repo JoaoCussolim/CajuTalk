@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +28,7 @@ import androidx.navigation.compose.*
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -44,6 +46,8 @@ var chaHaeIn = User(login = "OlfatoRankS", senha = "ChaHae123", name = "Chae Hae
 var bellion = User(login = "SombraMaisForte", senha = "MorraAntares123", name = "Bellion", message = "Ashborn é absoluto.", imageUrl = "https://staticg.sportskeeda.com/editor/2024/02/a1b54-17071808977993-1920.jpg")
 
 val users = listOf(mainUser, antares,igris,beru,chaHaeIn,bellion)
+
+var chatBackgroundColor = Color(0xE5FFFAFA)
 
 @Composable
 fun FocusClearContainer(content: @Composable () -> Unit) {
@@ -103,6 +107,7 @@ fun DefaultBackIcon(navController: NavController) {
     )
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 @Preview
 fun Preview(){

@@ -205,7 +205,7 @@ fun UserProfileScreen(navController: NavController) {
     val accentColor = Color(0xFFFF6F9C)
     var name by remember { mutableStateOf(mainUser.name) }
     var message by remember { mutableStateOf(mainUser.message) }
-    var selectedColor by remember { mutableStateOf(Color.White) }
+    var selectedColor by remember { mutableStateOf(chatBackgroundColor) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     var stringSelectedImageUri by remember { mutableStateOf(mainUser.imageUrl) }
@@ -252,7 +252,7 @@ fun UserProfileScreen(navController: NavController) {
                 .padding(16.dp)
                 .size(40.dp)
                 .clickable {
-                    if(message == mainUser.message && name == mainUser.name && stringSelectedImageUri == mainUser.imageUrl){
+                    if(message == mainUser.message && name == mainUser.name && stringSelectedImageUri == mainUser.imageUrl && chatBackgroundColor == selectedColor){
                         navController.popBackStack()
                     }else{
                         showDialog = true
@@ -412,7 +412,7 @@ fun UserProfileScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     ColorPickerButton(selectedColor) { newColor ->
-                        selectedColor = newColor
+                        selectedColor = newColor;
                     }
 
                     Spacer(modifier = Modifier.width(18.dp))
@@ -427,6 +427,7 @@ fun UserProfileScreen(navController: NavController) {
                             mainUser.message = message
                             mainUser.name = name
                             mainUser.imageUrl = stringSelectedImageUri
+                            chatBackgroundColor = selectedColor
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
