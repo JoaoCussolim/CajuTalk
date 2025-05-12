@@ -42,8 +42,7 @@ import coil.compose.AsyncImage
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun SearchedUserProfileItem(user: User, navController : NavController, dataViewModel: DataViewModel) {

@@ -40,6 +40,11 @@ android {
 }
 
 dependencies {
+    implementation(libs.jwtdecode)
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
     implementation(libs.gson)
     implementation (libs.exoplayer)
     implementation(libs.coil.compose)

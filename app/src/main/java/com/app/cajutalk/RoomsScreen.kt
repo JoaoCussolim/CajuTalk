@@ -67,6 +67,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
@@ -175,16 +176,20 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
             Button(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                 onClick = {
-                    val novaSala = Sala(
-                        nome = nomeSala,
-                        membros = listOf(mainUser),
-                        senha = senhaSala,
-                        imageUrl = imageUrl,
-                        mensagens = mutableListOf(),
-                        criador = mainUser,
-                        privado = isPrivada
-                    )
-                    onCreate(novaSala)
+                    val novaSala = imageUrl?.let {
+                        Sala(
+                            nome = nomeSala,
+                            membros = listOf(mainUser),
+                            senha = senhaSala,
+                            imageUrl = it,
+                            mensagens = mutableListOf(),
+                            criador = mainUser,
+                            privado = isPrivada
+                        )
+                    }
+                    if (novaSala != null) {
+                        onCreate(novaSala)
+                    }
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -415,51 +420,31 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
     var mostrarDialogo by remember { mutableStateOf(false) }
-    val salasExplorar = remember {
-        mutableStateListOf(
+    val salasExplorar = remember { mutableStateListOf(
         Sala(
-            nome = "Exército de Dragões",
-            membros = listOf(antares),
+            nome = "Exército de Sombras que não são minhas",
+            membros = listOf(mainUser),
             senha = "",
-            imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
+            imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
             mensagens = mutableListOf(),
-            criador = antares,
+            criador = mainUser,
             privado = false,
         ),
         Sala(
-            nome = "Exército de Pokémon",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
+            nome = "Ue que quarto é esse",
+            membros = listOf(mainUser),
+            senha = "amor123",
+            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf3oWVeZdxwlFvz0usloJnSvUqR_xee4G6zQ&s",
             mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército de Banana",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército Genérico",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
+            criador = mainUser,
+            privado = true,
         )
-    )
-    }
+    ) }
     val salasUsuario = remember {
         mutableStateListOf(
         Sala(
             nome = "Exército de Sombras",
-            membros = listOf(mainUser, beru, igris, bellion),
+            membros = listOf(mainUser),
             senha = "",
             imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
             mensagens = mutableListOf(),
@@ -468,7 +453,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
         ),
         Sala(
             nome = "Exército Escondido \uD83D\uDE08",
-            membros = listOf(mainUser, chaHaeIn),
+            membros = listOf(mainUser),
             senha = "amor123",
             imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf3oWVeZdxwlFvz0usloJnSvUqR_xee4G6zQ&s",
             mensagens = mutableListOf(),

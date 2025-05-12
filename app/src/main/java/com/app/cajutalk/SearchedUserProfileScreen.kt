@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun ProfileHeader(userName: String, userImageURL: String) {
@@ -72,7 +73,7 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
             .background(color = BACKGROUND_COLOR)
     ) {
         DefaultBackIcon(navController)
-        ProfileHeader(user.name, user.imageUrl)
+        user.imageUrl?.let { ProfileHeader(user.name, it) }
 
         Card(
             shape = RoundedCornerShape(16.dp),
