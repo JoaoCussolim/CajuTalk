@@ -94,6 +94,8 @@ import coil.compose.AsyncImage
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.AudioRecorderViewModel
+import com.app.cajutalk.viewmodels.DataViewModel
 import kotlinx.coroutines.delay
 import java.io.File
 import java.io.FileOutputStream

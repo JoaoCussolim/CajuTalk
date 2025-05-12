@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.viewmodels
 
 import android.Manifest
 import android.app.Activity
