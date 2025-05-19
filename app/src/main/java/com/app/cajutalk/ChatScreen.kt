@@ -1,5 +1,4 @@
 package com.app.cajutalk
-
 import android.app.Activity
 import android.content.Context
 import android.media.MediaPlayer
@@ -122,8 +121,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-typealias ConteudoChat = Triple<Mensagem, User, String>
-
 @RequiresApi(Build.VERSION_CODES.O)
 fun MensagemDto.toLocalMensagem(apiBaseUrl: String, currentUserLogin: String, context: Context): Mensagem {
     val isCurrentUser = this.loginUsuario == currentUserLogin
@@ -151,16 +148,16 @@ fun MensagemDto.toLocalMensagem(apiBaseUrl: String, currentUserLogin: String, co
     return Mensagem(
         idApi = this.id,
         texto = if (this.tipoMensagem == "Texto") this.conteudo else "",
-        nomeArquivo = if (this.tipoMensagem != "Texto") localNomeArquivo else null,
+        nomeArquivo = (if (this.tipoMensagem != "Texto") localNomeArquivo else ""),
         uriArquivo = localUri, // Será nulo se ainda não baixado
         isUser = isCurrentUser,
         data = localDateTime,
-        urlDaApi = if (this.tipoMensagem != "Texto") /* RetrofitClient.BASE_URL.removeSuffix("/") */ apiBaseUrl + this.conteudo else null,
+        urlDaApi = if (this.tipoMensagem != "Texto") /* RetrofitClient.BASE_URL.removeSuffix("/") */ apiBaseUrl + this.conteudo else "",
         // Adicionar campos para tipo e senderInfo se necessário no seu modelo Mensagem local
         tipoApi = this.tipoMensagem,
         senderLoginApi = this.loginUsuario,
-        senderNameApi = null, // Você precisaria buscar o nome do usuário ou tê-lo no DTO
-        senderImageUrlApi = this.fotoPerfilURL
+        senderNameApi = "", // Você precisaria buscar o nome do usuário ou tê-lo no DTO
+        senderImageUrlApi = this.fotoPerfilURL.toString()
     )
 }
 
@@ -1018,20 +1015,34 @@ fun ChatScreen(
                                             handler.postDelayed({
                                                 // Checar se o botão ainda está pressionado e não há texto
                                                 if (pressStartTime != 0L && !canSendMessage && (System.currentTimeMillis() - pressStartTime >= 300L)) { // 300ms para long press
-                                                    if (audioRecorderViewModel.hasPermissions(context)) {
-                                                        isRecording = true // Inicia a gravação visual
-                                                        audioRecorderViewModel.startRecording(context)
+                                                    if (audioRecorderViewModel.hasPermissions(
+                                                            context
+                                                        )
+                                                    ) {
+                                                        isRecording =
+                                                            true // Inicia a gravação visual
+                                                        audioRecorderViewModel.startRecording(
+                                                            context
+                                                        )
                                                     } else {
-                                                        activity?.let { audioRecorderViewModel.requestPermissions(it) }
+                                                        activity?.let {
+                                                            audioRecorderViewModel.requestPermissions(
+                                                                it
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }, 300L) // 300ms de delay para considerar long press
                                         }
                                         true
                                     }
+
                                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                        val pressDuration = System.currentTimeMillis() - pressStartTime
-                                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null) // Remove o delayed runnable
+                                        val pressDuration =
+                                            System.currentTimeMillis() - pressStartTime
+                                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
+                                            null
+                                        ) // Remove o delayed runnable
 
                                         if (isRecording) {
                                             audioRecorderViewModel.stopRecording()
@@ -1049,7 +1060,8 @@ fun ChatScreen(
                                                         )
                                                     }
                                                 }
-                                                audioRecorderViewModel.audioPath = null // Limpar path
+                                                audioRecorderViewModel.audioPath =
+                                                    null // Limpar path
                                             }, 200)
 
 
@@ -1061,6 +1073,7 @@ fun ChatScreen(
                                         pressStartTime = 0L
                                         true
                                     }
+
                                     else -> false
                                 }
                             },
@@ -1111,13 +1124,18 @@ fun DownloadableMediaBubble(
 
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp),
         horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
     ) {
         if (!isUserMessage && showProfilePic) {
             AsyncImage(model = sender.imageUrl, contentDescription = "Foto de ${sender.name}",
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Gray))
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray))
             Spacer(modifier = Modifier.width(8.dp))
         }
         if (!isUserMessage && !showProfilePic) {
@@ -1125,7 +1143,10 @@ fun DownloadableMediaBubble(
         }
 
         Box(
-            modifier = Modifier.background(bubbleColor, shape).padding(12.dp).wrapContentWidth()
+            modifier = Modifier
+                .background(bubbleColor, shape)
+                .padding(12.dp)
+                .wrapContentWidth()
         ) {
             Column(modifier = Modifier.widthIn(max = 240.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1203,7 +1224,10 @@ fun DownloadableMediaBubble(
                 if (isDownloading) {
                     LinearProgressIndicator(
                         progress = { downloadProgress },
-                        modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .padding(top = 4.dp),
                         color = Color.White,
                         trackColor = Color.White.copy(alpha = 0.3f)
                     )
