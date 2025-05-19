@@ -101,45 +101,6 @@ import java.time.LocalDateTime
 
 typealias ConteudoChat = Triple<Mensagem, User, String>
 
-fun MensagemDto.toLocalMensagem(apiBaseUrl: String, currentUserLogin: String, context: Context): Mensagem {
-    val isCurrentUser = this.loginUsuario == currentUserLogin
-    var localUri: Uri? = null
-    var localNomeArquivo = this.conteudo // Por padrão, pode ser o nome do arquivo ou texto
-
-    if (this.tipoMensagem != "Texto") {
-        // O 'conteudo' do DTO é a URL relativa do arquivo na API (ex: /uploads/nome.jpg)
-        // Verifique se o arquivo já foi baixado e existe localmente
-        val fileNameFromUrl = this.conteudo.substringAfterLast('/')
-        localNomeArquivo = fileNameFromUrl
-        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-        val localFile = File(downloadDir, fileNameFromUrl)
-        if (localFile.exists()) {
-            localUri = Uri.fromFile(localFile) // Se já baixado, use o URI local
-        }
-    }
-
-    // Converter dataEnvio (String ISO 8601 UTC) para LocalDateTime
-    // Assumindo que dataEnvio é algo como "2023-10-27T10:30:00.123Z"
-    val zonedDateTime = ZonedDateTime.parse(this.dataEnvio)
-    val localDateTime = zonedDateTime.withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
-
-
-    return Mensagem(
-        idApi = this.id,
-        texto = if (this.tipoMensagem == "Texto") this.conteudo else "",
-        nomeArquivo = if (this.tipoMensagem != "Texto") localNomeArquivo else null,
-        uriArquivo = localUri, // Será nulo se ainda não baixado
-        isUser = isCurrentUser,
-        data = localDateTime,
-        urlDaApi = if (this.tipoMensagem != "Texto") /* RetrofitClient.BASE_URL.removeSuffix("/") */ apiBaseUrl + this.conteudo else null,
-        // Adicionar campos para tipo e senderInfo se necessário no seu modelo Mensagem local
-        tipoApi = this.tipoMensagem,
-        senderLoginApi = this.loginUsuario,
-        senderNameApi = null, // Você precisaria buscar o nome do usuário ou tê-lo no DTO
-        senderImageUrlApi = this.fotoPerfilURL
-    )
-}
-
 @Composable
 fun ChatBubble(message: String, sender: User, showProfile: Boolean) {
     val isUserMessage = sender.login == mainUser.login
@@ -612,146 +573,49 @@ fun VideoPreview(
     Spacer(modifier = Modifier.height(4.dp))
 }
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun ChatScreen(
-    salaId: Int, // Precisa do ID da sala
-    navController: NavController,
-    authViewModel: AuthViewModel = viewModel(), // Obter AuthViewModel
-    dataViewModel: DataViewModel = viewModel( // Obter DataViewModel, pode precisar de factory
-        factory = ViewModelFactory(LocalContext.current.applicationContext as Application, authViewModel)
-    ),
-    audioRecorderViewModel: AudioRecorderViewModel = viewModel() // Renomeado para clareza
-) {
-    // Obter usuário atual do AuthViewModel
-    val currentUser = authViewModel.getSavedUser() // Ou observe um State do AuthViewModel
+fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, roomViewModel: DataViewModel) {
+    val sala = roomViewModel.estadoSala.sala
 
-    // Sala e Membros (assumindo que você tem um estado para detalhes da sala no DataViewModel)
-    // Vamos usar o activeSalaDetailUiState para a sala atual
-    LaunchedEffect(salaId) {
-        dataViewModel.fetchSalaById(salaId) // Buscar detalhes da sala (incluindo criador)
-        dataViewModel.fetchUsuariosDaSala(salaId) // Buscar membros da sala
-    }
-    val salaDetailState by dataViewModel.activeSalaDetailUiState
-    val usuariosSalaState by dataViewModel.usuarioSalaUiState
-
-    var salaChat: SalaChatResponse? by remember { mutableStateOf(null) }
-    var salaCreatorName: String by remember { mutableStateOf("Desconhecido") }
-    var membersInRoom by remember { mutableStateOf<List<UsuarioDaSalaResponse>>(emptyList()) }
-
-    when (val state = salaDetailState) {
-        is SalaUiState.SuccessSingle -> salaChat = state.sala
-        is SalaUiState.Error -> Text("Erro ao carregar sala: ${state.message}")
-        else -> { /* Loading ou Idle */ }
-    }
-    when (val state = usuariosSalaState) {
-        is UsuarioSalaUiState.SuccessUserList -> membersInRoom = state.usuarios
-        is UsuarioSalaUiState.Error -> Text("Erro ao carregar membros: ${state.message}")
-        else -> { /* Loading ou Idle */ }
+    if (sala == null) {
+        Text("Erro: sala não encontrada")
+        return
     }
 
-    // Encontrar o nome do criador da sala
-    LaunchedEffect(salaChat, membersInRoom) {
-        salaChat?.let { chat ->
-            val creator = membersInRoom.find { it.usuarioId == chat.criadorID }
-            salaCreatorName = creator?.loginUsuario ?: "Desconhecido" // Usar login se nome não disponível
-        }
-    }
-
+    roomViewModel.estadoSala.membros = sala.membros
 
     val bottomColor = Color(0xFFFDB361)
-    var messageText by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
-    // Observar mensagens do ViewModel
-    val mensagemState by dataViewModel.mensagemUiState
-    var chatMessages by remember { mutableStateOf<List<Mensagem>>(emptyList()) } // Lista de Mensagem local
-
-    // API Base URL para construir URLs completas de arquivos
-    val apiBaseUrl = RetrofitClient.BASE_URL.removeSuffix("/")
-
-
-    // Carregar mensagens iniciais e observar novas
-    LaunchedEffect(salaId) {
-        dataViewModel.fetchMensagensDaSala(salaId)
-    }
-
-    // Atualizar a lista local 'chatMessages' quando o estado do ViewModel mudar
-    LaunchedEffect(mensagemState) {
-        if (mensagemState is MensagemUiState.SuccessReceivedList) {
-            val apiMessages = (mensagemState as MensagemUiState.SuccessReceivedList).mensagens
-            chatMessages = apiMessages.mapNotNull { dto ->
-                currentUser?.login?.let { login ->
-                    val localMsg = dto.toLocalMensagem(apiBaseUrl, login, context)
-                    // Tentar encontrar nome e imagem do sender nos membros da sala
-                    val senderInfo = membersInRoom.find { it.usuarioId == dto.usuarioId }
-                    localMsg.senderNameApi = senderInfo?.loginUsuario ?: dto.loginUsuario // Ou nome se tiver
-                    localMsg.senderImageUrlApi = senderInfo?.fotoPerfilURL ?: dto.fotoPerfilURL
-                    localMsg
-                }
-            }.sortedBy { it.data } // Ordenar por data
-        } else if (mensagemState is MensagemUiState.SuccessSent) {
-            // Adicionar mensagem enviada à lista ou recarregar tudo
-            dataViewModel.fetchMensagensDaSala(salaId) // Simplesmente recarregar
-        }
-    }
-
-
-    // Lógica para abrir o seletor de arquivos
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { selectedUri ->
-            val file = uriToFile(context, selectedUri) // Converte URI para File
-            if (file != null) {
-                val mimeType = context.contentResolver.getType(selectedUri) ?: "*/*"
-                val tipoMensagemApi = when {
-                    mimeType.startsWith("image") -> "Imagem"
-                    mimeType.startsWith("video") -> "Video"
-                    mimeType.startsWith("audio") -> "Audio"
-                    else -> "Arquivo"
-                }
-                // Usar a função do DataViewModel para enviar
-                dataViewModel.enviarMensagemComArquivo(
-                    salaId = salaId,
-                    conteudoTextoOpcional = null, // Ou o nome do arquivo, a API define isso
-                    arquivo = file,
-                    tipoMensagemApi = tipoMensagemApi
-                )
-            } else {
-                Toast.makeText(context, "Não foi possível acessar o arquivo.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    // Função para converter content URI para File (necessário para Retrofit Multipart)
-    fun uriToFile(context: Context, uri: Uri): File? {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val fileName = getFileNameFromUri(context, uri) // Sua função existente
-            val tempFile = File(context.cacheDir, fileName)
-            tempFile.outputStream().use { outputStream ->
-                inputStream?.copyTo(outputStream)
-            }
-            inputStream?.close()
-            tempFile
-        } catch (e: Exception) {
-            Log.e("ChatScreen", "Erro ao converter URI para File", e)
-            null
-        }
-    }
-
+    var message by remember { mutableStateOf("") }
+    val messages = remember { mutableStateListOf<ConteudoChat>() }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var showAlertDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
     val activity = context as? Activity
 
+    fun sendMessage(conteudo: Mensagem, sender: User, tipo: String) {
+        messages.add(Triple(conteudo, sender, tipo))
+    }
 
-    if (salaChat == null || currentUser == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator() // Tela de carregamento enquanto sala ou usuário não estão prontos
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val nomeArquivo = getFileNameFromUri(context, it)
+            val mensagem = Mensagem(
+                texto = "", // não tem texto
+                nomeArquivo = nomeArquivo,
+                uriArquivo = it,
+                isUser = true,
+                data = LocalDateTime.now()
+            )
+            sendMessage(mensagem, mainUser, "file")
         }
-        return // Não renderizar o resto se salaChat ou currentUser for nulo
     }
 
     Box(
@@ -766,434 +630,350 @@ fun ChatScreen(
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER DA SALA ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp) // Altura ajustada
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), // Padding ajustado
+                    .height(170.dp)
+                    .padding(vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Ícone padrão de voltar
-                        contentDescription = "Sair",
-                        modifier = Modifier.size(32.dp),
-                        tint = Color(0xFFFF5313)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                    contentDescription = "Sair",
+                    modifier = Modifier
+                        .padding(vertical = 20.dp)
+                        .size(60.dp)
+                        .clickable { navController.popBackStack() },
+                    tint = Color(0xFFFF5313)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(85.dp)
+                        .clip(CircleShape)
+                        .background(color = Color(0xFFFFD670))
+                        .align(Alignment.CenterVertically)
+                ) {
+                    AsyncImage(
+                        model = sala.imageUrl,
+                        contentDescription = "Ícone da Sala",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 }
-                AsyncImage(
-                    model = salaChat?.fotoPerfilURL ?: R.drawable.default_group_icon, // Placeholder para sala
-                    contentDescription = "Ícone da Sala",
-                    modifier = Modifier
-                        .size(60.dp) // Tamanho ajustado
-                        .clip(CircleShape)
-                        .background(color = Color(0xFFFFD670)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = salaChat?.nome ?: "Carregando Sala...",
-                        fontSize = 22.sp, // Tamanho ajustado
+                        text = sala.nome,
+                        fontSize = 30.sp,
                         fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-                        fontWeight = FontWeight.Bold, // Mais destaque
+                        fontWeight = FontWeight(400),
                         color = Color(0xFFFF5313),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        lineHeight = 30.sp,
                     )
+
                     Text(
-                        text = "Criada por: $salaCreatorName",
-                        fontSize = 14.sp, // Tamanho ajustado
-                        fontFamily = FontFamily(Font(R.font.lexend)), // Fonte mais legível
-                        color = Color(0xE5FFD670).copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "Criada por: ${sala.criador.name}",
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily(Font(R.font.baloo_bhai)),
+                        fontWeight = FontWeight(400),
+                        color = Color(0xE5FFD670),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp,
                     )
                 }
-                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "Menu",
-                            tint = Color(0xFFFF5313),
-                            modifier = Modifier.size(32.dp) // Tamanho ajustado
-                        )
-                    }
-                    DropdownMenu( /* ... sua lógica de menu ... */
+
+                Box(
+                    modifier = Modifier
+                        .wrapContentSize(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Menu",
+                        tint = Color(0xFFFF5313),
+                        modifier = Modifier
+                            .padding(vertical = 28.dp, horizontal = 16.dp)
+                            .size(40.dp)
+                            .clickable { menuExpanded = true } // abre o menu ao clicar
+                    )
+
+                    DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Ver membros", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+                            text = {
+                                Text(
+                                    text = "Ver membros",
+                                    fontFamily = FontFamily(Font(R.font.lexend)),
+                                    color = Color(0xFFFF7094)
+                                )
+                            },
                             onClick = {
                                 menuExpanded = false
-                                navController.navigate("room-members/${salaId}") // Passar ID da sala
+                                navController.navigate("room-members")
                             }
                         )
-                        // Apenas o criador pode excluir
-                        if (salaChat?.criadorID == currentUser.id) {
-                            DropdownMenuItem(
-                                text = { Text("Excluir sala", fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Red) },
-                                onClick = {
-                                    menuExpanded = false
-                                    showAlertDialog = true
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Excluir sala",
+                                    fontFamily = FontFamily(Font(R.font.lexend)),
+                                    color = Color(0xFFFF7094)
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                showAlertDialog = true
+                            }
+                        )
+                    }
+
+                    if (showAlertDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showAlertDialog = false },
+                            title = { Text("Excluir sala",
+                                fontFamily = FontFamily(Font(R.font.lexend)),
+                                color = ACCENT_COLOR) },
+                            text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showAlertDialog = false
+                                        //excluirSala()
+                                    }
+                                ) {
+                                    Text("Confirmar",
+                                        fontFamily = FontFamily(Font(R.font.lexend)),
+                                        color = Color(0xFFFF7094)
+                                    )
                                 }
-                            )
-                        }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = { showAlertDialog = false }
+                                ) {
+                                    Text("Cancelar", fontFamily = FontFamily(Font(R.font.lexend)),
+                                        color = Color(0xFFFF7094)
+                                    )
+                                }
+                            }
+                        )
                     }
                 }
             }
-            // --- FIM DO HEADER DA SALA ---
 
-            if (showAlertDialog) {
-                AlertDialog(
-                    onDismissRequest = { showAlertDialog = false },
-                    title = { Text("Excluir sala", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
-                    text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showAlertDialog = false
-                            dataViewModel.deleteSala(salaId) // Chamar ViewModel
-                            // Após deletar, observar o SalaUiState e navegar se SuccessSalaDeleted
-                        }) { Text("Confirmar", fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Red) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showAlertDialog = false }) { Text("Cancelar", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) }
-                    }
-                )
-            }
-            // Observar resultado da exclusão da sala e navegar
-            LaunchedEffect(salaDetailState) {
-                if (salaDetailState is SalaUiState.SuccessSalaDeleted) {
-                    Toast.makeText(context, "Sala excluída", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack() // Voltar para a tela anterior
-                    dataViewModel.resetActiveSalaDetailState() // Resetar estado
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-
-            // --- ÁREA DO CHAT ---
             Card(
-                shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp, bottomStart = 0.dp, bottomEnd = 0.dp), // Apenas cantos superiores
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = chatBackgroundColor),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Ocupa o espaço restante
+                    .weight(1f)
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    reverseLayout = true // Mensagens mais novas embaixo
-                ) {
-                    val reversedMessages = chatMessages.reversed() // Já está ordenado por data, reverter para lazycolumn
-                    itemsIndexed(reversedMessages) { idx, localMessage ->
-                        val prevMessageSenderLogin = reversedMessages.getOrNull(idx + 1)?.senderLoginApi
-                        val showProfilePic = localMessage.senderLoginApi != prevMessageSenderLogin && !localMessage.isUser
-
-                        // Simular User object para as bubbles
-                        val senderForBubble = User(
-                            id = 0, // Não crucial para a bubble
-                            login = localMessage.senderLoginApi ?: "unknown",
-                            name = localMessage.senderNameApi ?: (localMessage.senderLoginApi ?: "Unknown User"),
-                            imageUrl = localMessage.senderImageUrlApi,
-                            senha = ""
-                        )
-
-                        when (localMessage.tipoApi) {
-                            "Texto" -> ChatBubble(localMessage.texto, senderForBubble, showProfilePic)
-                            "Audio" -> {
-                                if (localMessage.uriArquivo != null) { // Já baixado/local
-                                    AudioBubble(localMessage.uriArquivo.toString(), senderForBubble, showProfilePic)
-                                } else if (localMessage.urlDaApi != null) {
-                                    // Lógica para mostrar "Baixar áudio" ou iniciar download
-                                    DownloadableMediaBubble(localMessage, senderForBubble, showProfilePic, dataViewModel, context, apiBaseUrl)
-                                }
-                            }
-                            "Imagem" -> {
-                                if (localMessage.uriArquivo != null) {
-                                    ImageContainer(imageUri = localMessage.uriArquivo!!, contentDescription = localMessage.nomeArquivo, isUserMessage = localMessage.isUser)
-                                } else if (localMessage.urlDaApi != null) {
-                                    DownloadableMediaBubble(localMessage, senderForBubble, showProfilePic, dataViewModel, context, apiBaseUrl)
-                                }
-                            }
-                            "Video" -> {
-                                if (localMessage.uriArquivo != null) {
-                                    VideoPreview(videoUri = localMessage.uriArquivo!!, isUserMessage = localMessage.isUser)
-                                } else if (localMessage.urlDaApi != null) {
-                                    DownloadableMediaBubble(localMessage, senderForBubble, showProfilePic, dataViewModel, context, apiBaseUrl)
-                                }
-                            }
-                            "Arquivo" -> {
-                                if (localMessage.uriArquivo != null || localMessage.urlDaApi != null) {
-                                    DownloadableMediaBubble(localMessage, senderForBubble, showProfilePic, dataViewModel, context, apiBaseUrl)
-                                }
-                            }
-                            // Adicionar outros tipos se necessário
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-                // --- INPUT DE MENSAGEM ---
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 4.dp), // Padding ajustado
-                    verticalAlignment = Alignment.Bottom // Alinhar ao fundo
-                ) {
-                    IconButton(onClick = { filePickerLauncher.launch("*/*") }) {
-                        Image(painter = painterResource(id = R.drawable.anexo_icon), contentDescription = "Anexo")
-                    }
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        placeholder = { Text("Digitar...", color = Color(0xFFFFA000)) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(25.dp),
-                        colors = OutlinedTextFieldDefaults.colors(/* ... */)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // --- BOTÃO DE ENVIAR / GRAVAR ÁUDIO ---
-                    val canSendMessage = messageText.isNotBlank()
-                    var pressStartTime by remember { mutableLongStateOf(0L) }
-                    var recordingDuration by remember { mutableLongStateOf(0L) } // Segundos
-                    var isRecording by remember { mutableStateOf(false) }
-                    var showRecordingDuration by remember { mutableStateOf(false) } // Para controlar a visibilidade
-                    val audioButtonSize by animateDpAsState(targetValue = if (isRecording) 70.dp else 50.dp, label = "audioButtonSize")
-
-
-                    LaunchedEffect(isRecording) {
-                        if (isRecording) {
-                            showRecordingDuration = true
-                            while (isRecording) { // Loop enquanto isRecording for true
-                                delay(100) // Atualiza a cada 100ms para mais fluidez
-                                recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
-                            }
-                        } else {
-                            // Apenas resetar a duração se não estiver enviando
-                            if (pressStartTime != 0L) { // Evita resetar se nunca começou a gravar
-                                recordingDuration = 0L
-                            }
-                            // Delay para o texto da duração sumir após soltar
-                            delay(200) // Pequeno delay
-                            showRecordingDuration = false
-                            pressStartTime = 0L // Resetar para próxima gravação
-                        }
-                    }
-
-
-                    Box(
+                Column(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
                         modifier = Modifier
-                            .size(audioButtonSize)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFF7090))
-                            .pointerInteropFilter { event ->
-                                when (event.action) {
-                                    MotionEvent.ACTION_DOWN -> {
-                                        if (!canSendMessage) { // Só iniciar gravação se não houver texto
-                                            pressStartTime = System.currentTimeMillis()
-                                            // Não seta isRecording aqui, espera o delay
-                                            // Postar um delayed runnable para verificar se é um long press
-                                            val handler = Handler(Looper.getMainLooper())
-                                            handler.postDelayed({
-                                                // Checar se o botão ainda está pressionado e não há texto
-                                                if (pressStartTime != 0L && !canSendMessage && (System.currentTimeMillis() - pressStartTime >= 300L)) { // 300ms para long press
-                                                    if (audioRecorderViewModel.hasPermissions(context)) {
-                                                        isRecording = true // Inicia a gravação visual
-                                                        audioRecorderViewModel.startRecording(context)
-                                                    } else {
-                                                        activity?.let { audioRecorderViewModel.requestPermissions(it) }
-                                                    }
-                                                }
-                                            }, 300L) // 300ms de delay para considerar long press
-                                        }
-                                        true
-                                    }
-                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                        val pressDuration = System.currentTimeMillis() - pressStartTime
-                                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null) // Remove o delayed runnable
-
-                                        if (isRecording) {
-                                            audioRecorderViewModel.stopRecording()
-                                            isRecording = false // Para a gravação visual
-                                            // Pequeno delay para garantir que o arquivo foi escrito
-                                            Handler(Looper.getMainLooper()).postDelayed({
-                                                audioRecorderViewModel.audioPath?.let { audioPath ->
-                                                    val audioFile = File(audioPath)
-                                                    if (audioFile.exists() && audioFile.length() > 0) {
-                                                        dataViewModel.enviarMensagemComArquivo(
-                                                            salaId = salaId,
-                                                            conteudoTextoOpcional = null,
-                                                            arquivo = audioFile,
-                                                            tipoMensagemApi = "Audio"
-                                                        )
-                                                    }
-                                                }
-                                                audioRecorderViewModel.audioPath = null // Limpar path
-                                            }, 200)
-
-
-                                        } else if (canSendMessage && pressDuration < 300L) { // Se foi um clique rápido e tem texto
-                                            dataViewModel.enviarMensagemTexto(salaId, messageText)
-                                            messageText = ""
-                                        }
-                                        // Resetar pressStartTime para evitar cliques fantasmas se o usuário segurar e soltar rápido sem intenção de gravar
-                                        pressStartTime = 0L
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            },
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .weight(1f),
+                        reverseLayout = true
                     ) {
-                        if (isRecording && showRecordingDuration) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(formatAudioButtonDuration(recordingDuration), color = Color.White, fontSize = 12.sp)
-                                Image(painter = painterResource(id = R.drawable.microfone_icon), contentDescription = "Gravando", modifier = Modifier.size(24.dp))
+                        val reversedMessages = messages.reversed()
+
+                        itemsIndexed(reversedMessages) { idx, (mensagem, sender, tipo) ->
+                            val next = reversedMessages.getOrNull(idx + 1)?.second
+                            val showProfile = next?.login != sender.login
+
+                            if (tipo == "file") {
+                                val mime = context.contentResolver.getType(mensagem.uriArquivo!!)
+                                if (mime?.startsWith("image") == true) {
+                                    ImageContainer(
+                                        imageUri = mensagem.uriArquivo,
+                                        contentDescription = mensagem.nomeArquivo,
+                                        isUserMessage = mensagem.isUser
+                                    )
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                } else if (mime?.startsWith("video") == true){
+                                    VideoPreview(videoUri = mensagem.uriArquivo, isUserMessage = mensagem.isUser)
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                } else {
+                                    FileBubble(mensagem, sender, showProfile) { uri ->
+                                        salvarArquivo(context, uri, mensagem.nomeArquivo)
+                                    }
+                                }
+                            } else if (tipo == "text") {
+                                ChatBubble(mensagem.texto, sender, showProfile)
+                            } else if (tipo == "audio") {
+                                AudioBubble(mensagem.texto, sender, showProfile)
                             }
-                        } else {
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { filePickerLauncher.launch("*/*") }) {
                             Image(
-                                painter = if (canSendMessage) painterResource(id = R.drawable.send_icon) else painterResource(id = R.drawable.microfone_icon),
-                                contentDescription = if (canSendMessage) "Enviar" else "Gravar Áudio",
-                                modifier = Modifier.size(28.dp)
+                                painter = painterResource(id = R.drawable.anexo_icon),
+                                contentDescription = "Anexo"
                             )
                         }
-                    }
-                }
-            }
-        }
-        // DisposableEffect para limpar o MediaPlayer da AudioBubble se necessário,
-        // mas a AudioBubble já tenta fazer isso com remember.
-        // Se tiver problemas com players de áudio vazando, um DisposableEffect aqui pode ser útil
-        // para chamar audioPlayer.release() em todas as instâncias quando a ChatScreen sair de composição.
-    }
-}
+                        OutlinedTextField(
+                            value = message,
+                            onValueChange = { message = it },
+                            placeholder = { Text("Digitar...", color = Color(0xFFFFA000)) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(25.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Color.Transparent,
+                                cursorColor = Color(0xFFFFA000),
+                                focusedContainerColor = WAVE_COLOR,
+                                unfocusedContainerColor = WAVE_COLOR,
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
 
-// Nova Composable para lidar com mídias que precisam ser baixadas
-@Composable
-fun DownloadableMediaBubble(
-    mensagem: Mensagem, // Seu modelo Mensagem local
-    sender: User,
-    showProfilePic: Boolean,
-    dataViewModel: DataViewModel, // Para iniciar o download
-    context: Context,
-    apiBaseUrl: String
-) {
-    val isUserMessage = sender.login == mainUser.login
-    val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
-    val shape = if (isUserMessage) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
-    else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+                        var pressStartTime by remember { mutableLongStateOf(0L) }
+                        var recordingDuration by remember { mutableLongStateOf(0L) }
+                        var isRecording by remember { mutableStateOf(false) }
+                        var appearDuration by remember { mutableStateOf(false) }
 
-    // Estado para controlar se o download está em progresso para esta mensagem específica
-    // Você pode querer mover isso para o objeto Mensagem se precisar que persista entre recomposições
-    var isDownloading by remember(mensagem.idApi) { mutableStateOf(mensagem.isDownloading) }
-    var downloadProgress by remember(mensagem.idApi) { mutableFloatStateOf(mensagem.downloadProgress) }
+                        val buttonSize by animateDpAsState(if (isRecording) 80.dp else 50.dp, animationSpec = tween(200))
 
+                        LaunchedEffect(isRecording) {
+                            if (isRecording) {
+                                appearDuration = true
+                                while (isRecording) {
+                                    delay(1000)
+                                    recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
+                                }
+                            } else {
+                                appearDuration = false
+                                recordingDuration = 0L
+                            }
+                        }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
-        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        if (!isUserMessage && showProfilePic) {
-            AsyncImage(model = sender.imageUrl, contentDescription = "Foto de ${sender.name}",
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Gray))
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        if (!isUserMessage && !showProfilePic) {
-            Spacer(modifier = Modifier.width(48.dp))
-        }
+                        Box(
+                            modifier = Modifier
+                                .size(buttonSize)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFF7090))
+                                .pointerInteropFilter { event ->
+                                    when (event.action) {
+                                        MotionEvent.ACTION_DOWN -> {
+                                            pressStartTime = System.currentTimeMillis()
+                                            isRecording = false
 
-        Box(
-            modifier = Modifier.background(bubbleColor, shape).padding(12.dp).wrapContentWidth()
-        ) {
-            Column(modifier = Modifier.widthIn(max = 240.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val iconRes = when (mensagem.tipoApi) {
-                        "Imagem" -> R.drawable.image_icon // Crie este ícone
-                        "Video" -> R.drawable.video_icon   // Crie este ícone
-                        "Audio" -> R.drawable.audio_icon   // Crie este ícone
-                        else -> R.drawable.description_icon
-                    }
-                    Icon(painter = painterResource(id = iconRes), contentDescription = mensagem.tipoApi, tint = Color.White, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = mensagem.nomeArquivo ?: "Arquivo",
-                        color = Color.White, fontWeight = FontWeight.Bold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (!isDownloading && mensagem.uriArquivo == null) {
-                        IconButton(onClick = {
-                            if (mensagem.urlDaApi != null) {
-                                isDownloading = true
-                                downloadProgress = 0f
-                                // Iniciar o download
-                                val scope = rememberCoroutineScope() // Precisa estar dentro de @Composable
-                                scope.launch(Dispatchers.IO) {
-                                    try {
-                                        val url = URL(mensagem.urlDaApi)
-                                        val connection = url.openConnection()
-                                        connection.connect()
-                                        val totalLength = connection.contentLength
-                                        val inputStream = connection.getInputStream()
-
-                                        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                                        val outFile = File(downloadDir, mensagem.nomeArquivo ?: "downloaded_${System.currentTimeMillis()}")
-
-                                        FileOutputStream(outFile).use { output ->
-                                            val data = ByteArray(1024)
-                                            var count: Int
-                                            var downloadedLength: Long = 0
-                                            while (inputStream.read(data).also { count = it } != -1) {
-                                                output.write(data, 0, count)
-                                                downloadedLength += count
-                                                if (totalLength > 0) {
-                                                    withContext(Dispatchers.Main) {
-                                                        downloadProgress = downloadedLength.toFloat() / totalLength
+                                            Handler(Looper.getMainLooper()).postDelayed({
+                                                if (System.currentTimeMillis() - pressStartTime >= 500L) {
+                                                    if (viewModel.hasPermissions(context)) {
+                                                        isRecording = true
+                                                        viewModel.startRecording(context)
+                                                    } else {
+                                                        if (activity != null) {
+                                                            viewModel.requestPermissions(activity)
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        }
-                                        inputStream.close()
-                                        withContext(Dispatchers.Main) {
-                                            isDownloading = false
-                                            // Atualizar a mensagem na lista principal com o URI local
-                                            // Esta parte é complexa, pois precisa atualizar o estado da lista de mensagens
-                                            // Uma abordagem seria o ViewModel gerenciar o estado de download de cada mensagem
-                                            Toast.makeText(context, "Download concluído: ${outFile.name}", Toast.LENGTH_SHORT).show()
-                                            // Forçar recarregamento das mensagens para pegar o URI local (ou ter um mecanismo melhor)
-                                            dataViewModel.fetchMensagensDaSala(mensagem.idApi ?: -1) // Supondo que idApi é o salaId aqui, o que está errado. Precisa do salaId.
-                                            // Você precisa do ID da sala atual para recarregar.
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.e("Download", "Erro ao baixar: ${e.message}", e)
-                                        withContext(Dispatchers.Main) {
-                                            isDownloading = false
-                                            Toast.makeText(context, "Erro no download.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
+                                            }, 500L)
 
+                                            true
+                                        }
+
+                                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                            val pressDuration =
+                                                System.currentTimeMillis() - pressStartTime
+
+                                            if (isRecording) {
+                                                isRecording = false
+                                                viewModel.stopRecording()
+
+                                                viewModel.audioPath?.let {
+                                                    val file = File(it)
+                                                    if (file.exists() && file.length() > 0) {
+                                                        sendMessage( Mensagem(
+                                                            texto = it,
+                                                            nomeArquivo = "",
+                                                            uriArquivo = null,
+                                                            isUser = true,
+                                                            data = LocalDateTime.now()
+                                                        ), mainUser, "audio")
+                                                    } else {
+                                                        println("⚠️ Arquivo de áudio inválido: $it")
+                                                    }
+                                                }
+                                            } else if (pressDuration < 500L) {
+                                                if (message.isNotBlank()) {
+                                                    sendMessage( Mensagem(
+                                                        texto = message,
+                                                        nomeArquivo = "",
+                                                        uriArquivo = null,
+                                                        isUser = true,
+                                                        data = LocalDateTime.now()
+                                                    ), mainUser, "text")
+                                                    message = ""
+                                                }
+                                            }
+
+                                            Handler(Looper.getMainLooper()).postDelayed({
+                                                isRecording = false
+                                            }, 500L)
+
+                                            recordingDuration = 0L
+                                            true
+                                        }
+
+                                        else -> false
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        )
+                        {
+                            if(isRecording && appearDuration) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        formatAudioButtonDuration(recordingDuration),
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+
+                                    Image(
+                                        painter = painterResource(id = R.drawable.microfone_icon),
+                                        contentDescription = "Microfone",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            } else {
+                                Image(
+                                    painter = if (message.isNotBlank()) painterResource(id = R.drawable.send_icon) else painterResource(id = R.drawable.microfone_icon),
+                                    contentDescription = if (message.isNotBlank()) "Enviar" else "Microfone",
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
-                        }) {
-                            Icon(painter = painterResource(id = R.drawable.download_icon), contentDescription = "Baixar", tint = Color.White)
                         }
                     }
-                }
-                if (isDownloading) {
-                    LinearProgressIndicator(
-                        progress = { downloadProgress },
-                        modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 4.dp),
-                        color = Color.White,
-                        trackColor = Color.White.copy(alpha = 0.3f)
-                    )
                 }
             }
         }
