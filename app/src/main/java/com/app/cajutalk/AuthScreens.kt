@@ -214,7 +214,7 @@ fun CadastroScreen(
 
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthUiState.Success -> { // Após registro bem-sucedido (API retorna tokens)
+            is AuthUiState.AuthSuccess -> { // Após registro bem-sucedido (API retorna tokens)
                 // Toast já mostrado pelo ViewModel
                 navController.navigate("login") {
                     popUpTo("login") { inclusive = true }

@@ -13,5 +13,5 @@ data class UsuarioUpdateRequest(
     val senhaUsuario: String?, // Nullable, nova senha em texto plano
 
     @SerializedName("novaFotoPerfil") // Na API C# é NovaFotoPerfil, uma string (URL ou Base64)
-    val novaFotoPerfil: String?
+    val novaFotoPerfil: String?,
 )
