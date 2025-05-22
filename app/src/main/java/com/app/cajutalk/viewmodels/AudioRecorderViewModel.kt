@@ -18,7 +18,6 @@ import java.io.File
 class AudioRecorderViewModel : ViewModel() {
     private var mediaRecorder: MediaRecorder? = null
     var audioPath by mutableStateOf<String?>(null)
-        private set
 
     fun hasPermissions(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
