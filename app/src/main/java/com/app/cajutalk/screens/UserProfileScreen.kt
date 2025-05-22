@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -55,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
@@ -108,7 +108,9 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
+        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
+            R.font.lexend
+        )), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -122,7 +124,9 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
             valueRange = 0f..255f
         )
 
-        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
+        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
+            R.font.lexend
+        )), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -136,7 +140,9 @@ fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
             valueRange = 0f..255f
         )
 
-        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.lexend)), color = Color.Black)
+        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
+            R.font.lexend
+        )), color = Color.Black)
         Slider(
             colors = SliderDefaults.colors(
                 thumbColor = Color(0xFFF08080),
@@ -223,7 +229,9 @@ fun UserProfileScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text(text = "Descartar alterações?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
-            text = { Text(text = "Você tem alterações não salvas. Deseja sair mesmo assim?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+            text = { Text(text = "Você tem alterações não salvas. Deseja sair mesmo assim?", fontFamily = FontFamily(Font(
+                R.font.lexend
+            )), color = ACCENT_COLOR) },
             confirmButton = {
                 TextButton(onClick = {
                     showDialog = false
@@ -417,7 +425,9 @@ fun UserProfileScreen(navController: NavController) {
 
                     Spacer(modifier = Modifier.width(18.dp))
 
-                    Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(R.font.lexend)))
+                    Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(
+                        R.font.lexend
+                    )))
 
                     Spacer(modifier = Modifier.width(32.dp))
 

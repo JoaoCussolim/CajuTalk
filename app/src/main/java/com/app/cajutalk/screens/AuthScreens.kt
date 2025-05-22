@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR

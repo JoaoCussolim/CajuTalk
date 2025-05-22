@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 

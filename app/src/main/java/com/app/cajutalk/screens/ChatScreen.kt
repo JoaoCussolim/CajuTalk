@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import android.app.Activity
 import android.content.Context
@@ -91,9 +91,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.R
+import com.app.cajutalk.classes.AudioPlayer
+import com.app.cajutalk.classes.Mensagem
+import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.AudioRecorderViewModel
 import kotlinx.coroutines.delay
 import java.io.File
 import java.io.FileOutputStream
@@ -743,7 +748,9 @@ fun ChatScreen(viewModel: AudioRecorderViewModel, navController: NavController, 
                             title = { Text("Excluir sala",
                                 fontFamily = FontFamily(Font(R.font.lexend)),
                                 color = ACCENT_COLOR) },
-                            text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
+                            text = { Text("Tem certeza que deseja excluir esta sala? Essa ação não pode ser desfeita.", fontFamily = FontFamily(Font(
+                                R.font.lexend
+                            )), color = ACCENT_COLOR) },
                             confirmButton = {
                                 TextButton(
                                     onClick = {

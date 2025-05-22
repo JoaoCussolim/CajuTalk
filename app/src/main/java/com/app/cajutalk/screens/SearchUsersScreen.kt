@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,11 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.R
+import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun SearchedUserProfileItem(user: User, navController : NavController, dataViewModel: DataViewModel) {
@@ -74,8 +74,12 @@ fun SearchedUserProfileItem(user: User, navController : NavController, dataViewM
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
-            Text(text = user.name, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
-            Text(text = user.login, fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)
+            Text(text = user.name, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
+                R.font.lexend
+            )))
+            Text(text = user.login, fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(
+                R.font.lexend
+            )
             ))
         }
     }

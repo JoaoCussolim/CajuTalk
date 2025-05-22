@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import android.content.pm.ActivityInfo
 import android.os.Build
@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
+import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
+import com.app.cajutalk.viewmodels.AudioRecorderViewModel
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -45,7 +47,7 @@ var beru = User(login = "AmoMaisMestreJinwoo", senha = "IgrisBuxa", name = "Beru
 var chaHaeIn = User(login = "OlfatoRankS", senha = "ChaHae123", name = "Chae Hae-in", message = "O cheiro do Jin Woo é bom \uD83D\uDE33", imageUrl = "https://images4.alphacoders.com/139/1391416.png")
 var bellion = User(login = "SombraMaisForte", senha = "MorraAntares123", name = "Bellion", message = "Ashborn é absoluto.", imageUrl = "https://staticg.sportskeeda.com/editor/2024/02/a1b54-17071808977993-1920.jpg")
 
-val users = listOf(mainUser, antares,igris,beru,chaHaeIn,bellion)
+val users = listOf(mainUser, antares, igris, beru, chaHaeIn, bellion)
 
 var chatBackgroundColor = Color(0xE5FFFAFA)
 

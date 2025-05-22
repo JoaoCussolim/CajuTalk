@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.classes
 
 import java.io.Serializable
 

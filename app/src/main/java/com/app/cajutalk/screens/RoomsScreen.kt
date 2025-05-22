@@ -1,4 +1,4 @@
-package com.app.cajutalk
+package com.app.cajutalk.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.app.cajutalk.R
+import com.app.cajutalk.classes.Sala
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 
@@ -326,8 +328,12 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
         Spacer(modifier = Modifier.width(8.dp))
 
         Column {
-            Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
-            Text(text = sala.getMembrosToString(), fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
+                R.font.lexend
+            )))
+            Text(text = sala.getMembrosToString(), fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(
+                R.font.lexend
+            )))
         }
     }
 }
@@ -611,7 +617,9 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
                                 .focusable()
                                 .weight(1f)
                                 .padding(start = 8.dp),
-                            textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(R.font.lexend))),
+                            textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(
+                                R.font.lexend
+                            ))),
                             cursorBrush = SolidColor(Color(0xFFFF7094)),
                             decorationBox = {innerTextField ->
                                 Box(
