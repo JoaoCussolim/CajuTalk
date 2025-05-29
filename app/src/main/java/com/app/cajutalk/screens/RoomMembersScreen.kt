@@ -41,12 +41,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
-import com.app.cajutalk.classes.User
+import com.app.cajutalk.network.models.UsuarioDaSalaDto
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
-fun RoomMemberItem(user: User, navController : NavController, dataViewModel: DataViewModel) {
+fun RoomMemberItem(user: UsuarioDaSalaDto, navController: NavController, dataViewModel: DataViewModel) {
     var expanded by remember { mutableStateOf(false) }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -63,12 +64,12 @@ fun RoomMemberItem(user: User, navController : NavController, dataViewModel: Dat
                 .size(50.dp)
                 .clip(CircleShape)
                 .clickable {
-                    dataViewModel.usuarioProcurado = user
+                    //dataViewModel.usuarioProcurado = user
                     navController.navigate("searched-user-profile")
                 }
         ) {
             AsyncImage(
-                model = user.imageUrl,
+                model = user.FotoPerfilURL,
                 contentDescription = "Ícone da Sala",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -81,25 +82,25 @@ fun RoomMemberItem(user: User, navController : NavController, dataViewModel: Dat
             modifier = Modifier
                 .weight(1f)
                 .clickable {
-                    dataViewModel.usuarioProcurado = user
+                    //dataViewModel.usuarioProcurado = user
                     navController.navigate("searched-user-profile")
                 }
         ) {
             Text(
-                text = user.name,
+                text = user.LoginUsuario,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 fontFamily = FontFamily(Font(R.font.lexend))
             )
             Text(
-                text = user.login,
+                text = user.LoginUsuario,
                 fontSize = 12.sp,
                 color = Color.Gray,
                 fontFamily = FontFamily(Font(R.font.lexend))
             )
         }
 
-        if(dataViewModel.estadoSala.sala?.criador == mainUser && mainUser != user) {
+        if(dataViewModel.estadoSala.sala?.Nome == mainUser.name && mainUser.login != user.LoginUsuario) {
             Box {
                     IconButton(onClick = { expanded = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Menu")

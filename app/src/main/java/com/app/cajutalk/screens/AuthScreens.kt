@@ -1,5 +1,6 @@
 package com.app.cajutalk.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,16 +11,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,17 +33,20 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.AuthViewModel
 
 @Composable
 fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
@@ -84,11 +91,33 @@ fun AuthHeader() {
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    val bottomColor = Color(0xFFFDB361)
-    val highlightColor = Color(0xFFFF7D4C)
+    val authViewModel: AuthViewModel = viewModel()
+    val loginResult by authViewModel.loginResult.observeAsState()
+    val isLoading by authViewModel.isLoading.observeAsState(initial = false)
+
+    val context = LocalContext.current
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    loginResult?.let { result ->
+        if (result.isSuccess) {
+            Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
+            errorMessage = null
+            navController.navigate("salas") {
+                // Limpa o back stack para que o usuário não volte para a tela de login
+                popUpTo("login") { inclusive = true }
+            }
+        } else {
+            val exception = result.exceptionOrNull()
+            errorMessage = exception?.message ?: "Erro desconhecido no login."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val bottomColor = Color(0xFFFDB361)
+    val highlightColor = Color(0xFFFF7D4C)
 
     Box(
         modifier = Modifier
@@ -170,26 +199,40 @@ fun LoginScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 Button(
                     onClick = {
-                        navController.navigate("salas")
+                        errorMessage = null
+                        authViewModel.login(username, password)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(45.dp),
-
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ACCENT_COLOR,
                         contentColor = Color.White
-                    )
+                    ),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        text = "Login",
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily(Font(R.font.lexend)),
-                        fontWeight = FontWeight(700),
-                        color = Color(0xFFFFE4EB),
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "Login",
+                            fontSize = 20.sp,
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(700),
+                            color = Color(0xFFFFE4EB),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -217,13 +260,35 @@ fun LoginScreen(navController: NavController) {
 
 @Composable
 fun CadastroScreen(navController: NavController) {
-    val bottomColor = Color(0xFFFDB361)
-    val waveColor = Color(0xFFFFD670)
-    val highlightColor = Color(0xFFFF7D4C)
+    val authViewModel: AuthViewModel = viewModel()
+    val registerResult by authViewModel.registerResult.observeAsState()
+    val isLoading by authViewModel.isLoading.observeAsState(initial = false)
 
+    val context = LocalContext.current
+
+    var login by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    registerResult?.let { result ->
+        if (result.isSuccess) {
+            Toast.makeText(context, "Cadastro bem-sucedido!", Toast.LENGTH_SHORT).show()
+            errorMessage = null
+            navController.navigate("salas") {
+                popUpTo("cadastro") { inclusive = true }
+            }
+        } else {
+            val exception = result.exceptionOrNull()
+            errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val bottomColor = Color(0xFFFDB361)
+    val waveColor = Color(0xFFFFD670)
+    val highlightColor = Color(0xFFFF7D4C)
 
     Box(
         modifier = Modifier
@@ -275,6 +340,27 @@ fun CadastroScreen(navController: NavController) {
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = login,
+                    onValueChange = { login = it },
+                    label = {
+                        Text(
+                            text = "Login",
+                            fontSize = 15.sp,
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(700),
+                            color = Color(0xFFF08080),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = username,
@@ -341,26 +427,44 @@ fun CadastroScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 Button(
                     onClick = {
-                        navController.navigate("salas")
+                        if (password != confirmPassword) {
+                            errorMessage = "As senhas não coincidem."
+                        } else {
+                            errorMessage = null
+                            authViewModel.register(username, login, password)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(45.dp),
-
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ACCENT_COLOR,
                         contentColor = Color.White
-                    )
+                    ),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        text = "Cadastrar",
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily(Font(R.font.lexend)),
-                        fontWeight = FontWeight(700),
-                        color = Color(0xFFFFE4EB),
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "Cadastrar",
+                            fontSize = 20.sp,
+                            fontFamily = FontFamily(Font(R.font.lexend)),
+                            fontWeight = FontWeight(700),
+                            color = Color(0xFFFFE4EB),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

@@ -5,8 +5,8 @@ import android.content.SharedPreferences
 
 object TokenManager {
     private const val PREFS_NAME = "auth_prefs"
-    private const val KEY_ACCESS_TOKEN = "access_token"
-    private const val KEY_REFRESH_TOKEN = "refresh_token"
+    private const val KEY_ACCESS_TOKEN = "accessToken"
+    private const val KEY_REFRESH_TOKEN = "refreshToken"
 
     private fun getPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

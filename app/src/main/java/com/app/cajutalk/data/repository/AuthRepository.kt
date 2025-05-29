@@ -17,14 +17,20 @@ class AuthRepository(
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.login(loginModel)
-                if (response.isSuccessful && response.body() != null) {
-                    val tokenResponse = response.body()!!
-                    TokenManager.saveTokens(
-                        applicationContext,
-                        tokenResponse.AccessToken,
-                        tokenResponse.RefreshToken
-                    )
-                    Result.success(tokenResponse)
+                if (response.isSuccessful) {
+                    val tokenResponse = response.body()
+                    if (tokenResponse != null && tokenResponse.AccessToken != null && tokenResponse.RefreshToken != null) { // <--- Adição da verificação de null
+                        TokenManager.saveTokens(
+                            applicationContext,
+                            tokenResponse.AccessToken,
+                            tokenResponse.RefreshToken
+                        )
+                        Result.success(tokenResponse)
+                    } else {
+                        // Se o corpo ou os tokens são nulos apesar de isSuccessful
+                        val errorMsg = "Resposta de token inválida do servidor: ${response.code()} - ${response.errorBody()?.string() ?: "Corpo nulo"}"
+                        Result.failure(Exception(errorMsg))
+                    }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Login falhou: ${response.code()}"
                     Result.failure(Exception(errorMsg))
@@ -35,18 +41,24 @@ class AuthRepository(
         }
     }
 
+
     suspend fun register(registerModel: RegisterModel): Result<TokenResponse> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.register(registerModel)
-                if (response.isSuccessful && response.body() != null) {
-                    val tokenResponse = response.body()!!
-                    TokenManager.saveTokens(
-                        applicationContext,
-                        tokenResponse.AccessToken,
-                        tokenResponse.RefreshToken
-                    )
-                    Result.success(tokenResponse)
+                if (response.isSuccessful) {
+                    val tokenResponse = response.body()
+                    if (tokenResponse != null && tokenResponse.AccessToken != null && tokenResponse.RefreshToken != null) { // <--- Adição da verificação de null
+                        TokenManager.saveTokens(
+                            applicationContext,
+                            tokenResponse.AccessToken,
+                            tokenResponse.RefreshToken
+                        )
+                        Result.success(tokenResponse)
+                    } else {
+                        val errorMsg = "Resposta de token inválida do servidor: ${response.code()} - ${response.errorBody()?.string() ?: "Corpo nulo"}"
+                        Result.failure(Exception(errorMsg))
+                    }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Cadastro falhou: ${response.code()}"
                     Result.failure(Exception(errorMsg))

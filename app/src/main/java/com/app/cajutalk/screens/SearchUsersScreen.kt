@@ -44,6 +44,7 @@ import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun SearchedUserProfileItem(user: User, navController : NavController, dataViewModel: DataViewModel) {
@@ -55,7 +56,7 @@ fun SearchedUserProfileItem(user: User, navController : NavController, dataViewM
             .padding(8.dp)
             .background(color = WAVE_COLOR, shape = RoundedCornerShape(25.dp))
             .clickable {
-                dataViewModel.usuarioProcurado = user
+                //dataViewModel.usuarioProcurado = user
                 navController.navigate("searched-user-profile")
                        },
         verticalAlignment = Alignment.CenterVertically

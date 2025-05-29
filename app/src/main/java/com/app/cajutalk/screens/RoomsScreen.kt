@@ -69,6 +69,7 @@ import com.app.cajutalk.R
 import com.app.cajutalk.classes.Sala
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
@@ -215,7 +216,7 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.nome}",
+                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.Nome}",
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontSize = 22.sp,
                 color = ACCENT_COLOR,
@@ -261,7 +262,7 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
             Button(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                 onClick = {
-                    if (senhaSala == roomViewModel.estadoSala.sala?.senha) {
+                    if (senhaSala == roomViewModel.estadoSala.sala?.Nome) {
                         navController.navigate("chat")
                         onDismiss()
                     } else {
@@ -304,7 +305,7 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                roomViewModel.estadoSala.sala = sala
+                //roomViewModel.estadoSala.sala = sala
                 if(sala.privado == true){
                     mostrarDialogo = true
                 }else{

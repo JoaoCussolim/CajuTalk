@@ -28,6 +28,7 @@ import androidx.navigation.compose.*
 import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import com.app.cajutalk.viewmodels.AudioRecorderViewModel
+import com.app.cajutalk.viewmodels.DataViewModel
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)

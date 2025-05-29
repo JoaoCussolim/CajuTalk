@@ -30,6 +30,7 @@ import coil.compose.AsyncImage
 import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
 fun ProfileHeader(userName: String, userImageURL: String) {
@@ -73,7 +74,7 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
             .background(color = BACKGROUND_COLOR)
     ) {
         DefaultBackIcon(navController)
-        ProfileHeader(user.name, user.imageUrl)
+        user.FotoPerfilURL?.let { ProfileHeader(user.NomeUsuario, it) }
 
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -98,13 +99,15 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
                     color = Color(0xFFF08080),
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = user.message.ifBlank { "Nenhum recado disponível" },
-                    fontSize = 18.sp,
-                    fontFamily = FontFamily(Font(R.font.lexend)),
-                    fontWeight = FontWeight(400),
-                    color = Color.Black
-                )
+                user.Recado?.let {
+                    Text(
+                        text = it,
+                        fontSize = 18.sp,
+                        fontFamily = FontFamily(Font(R.font.lexend)),
+                        fontWeight = FontWeight(400),
+                        color = Color.Black
+                    )
+                }
             }
         }
     }
