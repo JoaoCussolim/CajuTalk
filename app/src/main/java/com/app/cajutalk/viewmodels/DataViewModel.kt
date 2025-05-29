@@ -16,4 +16,5 @@ data class EstadoSala(
 class DataViewModel : ViewModel() {
     var estadoSala by mutableStateOf(EstadoSala(null, emptyList()))
     var usuarioProcurado by mutableStateOf<UsuarioDto?>(null)
+    var usuarioLogado by mutableStateOf<UsuarioDto?>(null)
 }
