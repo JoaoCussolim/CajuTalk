@@ -1,7 +1,6 @@
 package com.app.cajutalk.screens
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -49,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,14 +60,6 @@ import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.cajutalk.viewmodels.DataViewModel
-import com.app.cajutalk.viewmodels.UserViewModel
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.livedata.observeAsState
-import com.app.cajutalk.network.models.UsuarioUpdateDto
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 
 @Composable
 fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
@@ -215,40 +207,14 @@ fun ColorPickerButton(selectedColor: Color, onColorSelected: (Color) -> Unit) {
 }
 
 @Composable
-fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel) {
-    val userViewModel: UserViewModel = viewModel()
-    val context = LocalContext.current
-
-    val loggedInUser = dataViewModel.usuarioLogado
-
-    var name by remember { mutableStateOf(loggedInUser?.NomeUsuario ?: "") }
-    var message by remember { mutableStateOf(loggedInUser?.Recado ?: "") }
-    var selectedColor by remember { mutableStateOf(chatBackgroundColor) } // Initial color from global var
+fun UserProfileScreen(navController: NavController) {
+    val accentColor = Color(0xFFFF6F9C)
+    var name by remember { mutableStateOf(mainUser.name) }
+    var message by remember { mutableStateOf(mainUser.message) }
+    var selectedColor by remember { mutableStateOf(chatBackgroundColor) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showDialog by remember { mutableStateOf(false) }
-    var stringSelectedImageUri by remember { mutableStateOf(loggedInUser?.FotoPerfilURL ?: "") }
-
-    val updateResult by userViewModel.updateUserResult.observeAsState()
-
-    LaunchedEffect(loggedInUser) {
-        // Initialize UI states when loggedInUser changes
-        name = loggedInUser?.NomeUsuario ?: ""
-        message = loggedInUser?.Recado ?: ""
-        stringSelectedImageUri = loggedInUser?.FotoPerfilURL ?: ""
-        // chatBackgroundColor is global, so no direct update from DTO unless you add a field for it
-    }
-
-    LaunchedEffect(updateResult) {
-        updateResult?.let { result ->
-            if (result.isSuccess) {
-                Toast.makeText(context, "Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
-                // Refresh the logged-in user in DataViewModel after successful update
-                userViewModel.getCurrentUserDetails()
-            } else {
-                Toast.makeText(context, "Erro ao atualizar perfil: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
+    var stringSelectedImageUri by remember { mutableStateOf(mainUser.imageUrl) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -294,17 +260,12 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
                 .padding(16.dp)
                 .size(40.dp)
                 .clickable {
-                    // Check if changes were made before popping back
-                    val hasChanges = name != (loggedInUser?.NomeUsuario ?: "") ||
-                            message != (loggedInUser?.Recado ?: "") ||
-                            stringSelectedImageUri != (loggedInUser?.FotoPerfilURL ?: "") ||
-                            chatBackgroundColor != selectedColor
-                    if(hasChanges){
-                        showDialog = true
-                    } else {
+                    if(message == mainUser.message && name == mainUser.name && stringSelectedImageUri == mainUser.imageUrl && chatBackgroundColor == selectedColor){
                         navController.popBackStack()
+                    }else{
+                        showDialog = true
                     }
-                },
+                           },
             tint = BACK_ICON_TINT
         )
 
@@ -315,7 +276,7 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Olá, ${loggedInUser?.LoginUsuario ?: "Usuário"}",
+                text = "Olá, ${mainUser.login}",
                 fontSize = 30.sp,
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontWeight = FontWeight(700),
@@ -328,7 +289,7 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
                 contentAlignment = Alignment.BottomEnd
             ) {
                 AsyncImage(
-                    model = selectedImageUri ?: stringSelectedImageUri.ifEmpty { R.drawable.placeholder_image }, // Use placeholder if URL is empty
+                    model = selectedImageUri ?: mainUser.imageUrl,
                     contentDescription = "Ícone do Usuário",
                     modifier = Modifier
                         .size(160.dp)
@@ -399,8 +360,8 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ACCENT_COLOR,
-                        cursorColor = ACCENT_COLOR
+                        focusedBorderColor = accentColor,
+                        cursorColor = accentColor
                     )
                 )
 
@@ -428,8 +389,8 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ACCENT_COLOR,
-                        cursorColor = ACCENT_COLOR
+                        focusedBorderColor = accentColor,
+                        cursorColor = accentColor
                     )
                 )
 
@@ -473,16 +434,9 @@ fun UserProfileScreen(navController: NavController, dataViewModel: DataViewModel
                     Button(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                         onClick = {
-                            loggedInUser?.let { user ->
-                                val updateDto = UsuarioUpdateDto(
-                                    NomeUsuario = name,
-                                    LoginUsuario = null, // Not updating login here
-                                    SenhaUsuario = null, // Not updating password here
-                                    NovaFotoPerfil = stringSelectedImageUri.ifEmpty { null }, // Send null if empty
-                                    Recado = message
-                                )
-                                userViewModel.updateUser(user.ID, updateDto)
-                            }
+                            mainUser.message = message
+                            mainUser.name = name
+                            mainUser.imageUrl = stringSelectedImageUri
                             chatBackgroundColor = selectedColor
                         },
                         modifier = Modifier.fillMaxWidth()
