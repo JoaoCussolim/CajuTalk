@@ -47,6 +47,8 @@ import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
 import com.app.cajutalk.viewmodels.AuthViewModel
+import com.app.cajutalk.viewmodels.DataViewModel
+import com.app.cajutalk.viewmodels.UserViewModel // Import UserViewModel
 
 @Composable
 fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
@@ -90,10 +92,12 @@ fun AuthHeader() {
 }
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController, dataViewModel: DataViewModel) {
     val authViewModel: AuthViewModel = viewModel()
+    val userViewModel: UserViewModel = viewModel() // Instantiate UserViewModel
     val loginResult by authViewModel.loginResult.observeAsState()
     val isLoading by authViewModel.isLoading.observeAsState(initial = false)
+    val currentUserDetails by userViewModel.currentUserDetails.observeAsState() // Observe current user details
 
     val context = LocalContext.current
 
@@ -101,17 +105,30 @@ fun LoginScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Handle login result
     loginResult?.let { result ->
         if (result.isSuccess) {
+            // Login successful, now fetch user details
+            userViewModel.getCurrentUserDetails()
+        } else {
+            val exception = result.exceptionOrNull()
+            errorMessage = exception?.message ?: "Erro desconhecido no login."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Handle current user details result
+    currentUserDetails?.let { result ->
+        if (result.isSuccess) {
+            dataViewModel.usuarioLogado = result.getOrNull() // Store the logged-in user
             Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
             errorMessage = null
             navController.navigate("salas") {
-                // Limpa o back stack para que o usuário não volte para a tela de login
                 popUpTo("login") { inclusive = true }
             }
         } else {
             val exception = result.exceptionOrNull()
-            errorMessage = exception?.message ?: "Erro desconhecido no login."
+            errorMessage = exception?.message ?: "Erro ao carregar detalhes do usuário."
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
         }
     }
@@ -259,10 +276,12 @@ fun LoginScreen(navController: NavController) {
 }
 
 @Composable
-fun CadastroScreen(navController: NavController) {
+fun CadastroScreen(navController: NavController, dataViewModel: DataViewModel) {
     val authViewModel: AuthViewModel = viewModel()
+    val userViewModel: UserViewModel = viewModel() // Instantiate UserViewModel
     val registerResult by authViewModel.registerResult.observeAsState()
     val isLoading by authViewModel.isLoading.observeAsState(initial = false)
+    val currentUserDetails by userViewModel.currentUserDetails.observeAsState() // Observe current user details
 
     val context = LocalContext.current
 
@@ -272,8 +291,22 @@ fun CadastroScreen(navController: NavController) {
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Handle register result
     registerResult?.let { result ->
         if (result.isSuccess) {
+            // Registration successful, now fetch user details
+            userViewModel.getCurrentUserDetails()
+        } else {
+            val exception = result.exceptionOrNull()
+            errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Handle current user details result
+    currentUserDetails?.let { result ->
+        if (result.isSuccess) {
+            dataViewModel.usuarioLogado = result.getOrNull() // Store the logged-in user
             Toast.makeText(context, "Cadastro bem-sucedido!", Toast.LENGTH_SHORT).show()
             errorMessage = null
             navController.navigate("salas") {
@@ -281,10 +314,11 @@ fun CadastroScreen(navController: NavController) {
             }
         } else {
             val exception = result.exceptionOrNull()
-            errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
+            errorMessage = exception?.message ?: "Erro ao carregar detalhes do usuário após cadastro."
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
         }
     }
+
 
     val bottomColor = Color(0xFFFDB361)
     val waveColor = Color(0xFFFFD670)
