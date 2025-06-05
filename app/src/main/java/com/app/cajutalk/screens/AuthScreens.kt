@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.app.cajutalk.R
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
@@ -90,8 +89,7 @@ fun AuthHeader() {
 }
 
 @Composable
-fun LoginScreen(navController: NavController) {
-    val authViewModel: AuthViewModel = viewModel()
+fun LoginScreen(navController: NavController, authViewModel: AuthViewModel) { // Added authViewModel parameter
     val loginResult by authViewModel.loginResult.observeAsState()
     val isLoading by authViewModel.isLoading.observeAsState(initial = false)
 
@@ -106,7 +104,6 @@ fun LoginScreen(navController: NavController) {
             Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
             errorMessage = null
             navController.navigate("salas") {
-                // Limpa o back stack para que o usuário não volte para a tela de login
                 popUpTo("login") { inclusive = true }
             }
         } else {
@@ -259,8 +256,7 @@ fun LoginScreen(navController: NavController) {
 }
 
 @Composable
-fun CadastroScreen(navController: NavController) {
-    val authViewModel: AuthViewModel = viewModel()
+fun CadastroScreen(navController: NavController, authViewModel: AuthViewModel) { // Added authViewModel parameter
     val registerResult by authViewModel.registerResult.observeAsState()
     val isLoading by authViewModel.isLoading.observeAsState(initial = false)
 

@@ -6,20 +6,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.app.cajutalk.data.repository.AuthRepository
-import com.app.cajutalk.network.ApiService
-import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.LoginModel
 import com.app.cajutalk.network.models.RegisterModel
 import com.app.cajutalk.network.models.TokenResponse
 import kotlinx.coroutines.launch
 
-class AuthViewModel(application: Application) : AndroidViewModel(application)  {
-    private val authRepository: AuthRepository
-
-    init {
-        val apiService = RetrofitClient.createService(application, ApiService::class.java)
-        authRepository = AuthRepository(apiService, application.applicationContext)
-    }
+class AuthViewModel(application: Application, private val authRepository: AuthRepository) : AndroidViewModel(application)  { // Updated constructor
 
     private val _loginResult = MutableLiveData<Result<TokenResponse>>()
     val loginResult: LiveData<Result<TokenResponse>> = _loginResult

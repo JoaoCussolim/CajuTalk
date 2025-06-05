@@ -1,5 +1,6 @@
 package com.app.cajutalk.screens
 
+import android.app.Application
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -29,16 +31,19 @@ import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import com.app.cajutalk.viewmodels.AudioRecorderViewModel
 import com.app.cajutalk.viewmodels.DataViewModel
+import com.app.cajutalk.viewmodels.ViewModelFactory // Import the ViewModelFactory
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CajuTalkApp()
-
+            // Create an instance of your ViewModelFactory
+            val factory = ViewModelFactory(application) // Pass the application instance
+            CajuTalkApp(factory) // Pass the factory to your CajuTalkApp
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-        } }
+        }
+    }
 }
 
 var mainUser = User(login = "FakeDoAshborn", senha = "AmoChaHaeIn", name = "Sung Jin Woo", message = "Amo meu exército", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
@@ -71,12 +76,12 @@ fun FocusClearContainer(content: @Composable () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CajuTalkApp() {
+fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
     val navController = rememberNavController()
     val audioRecorderViewModel = AudioRecorderViewModel()
-    val dataViewModel: DataViewModel = viewModel()
+    val dataViewModel: DataViewModel = viewModel() // DataViewModel doesn't require factory as it has no dependencies
 
-    FocusClearContainer{
+    FocusClearContainer {
         NavHost(
             navController = navController,
             startDestination = "cadastro",
@@ -85,14 +90,47 @@ fun CajuTalkApp() {
             popEnterTransition = { fadeIn(animationSpec = tween(300)) },
             popExitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
-            composable("login") { LoginScreen(navController) }
-            composable("cadastro") { CadastroScreen(navController) }
-            composable("salas") { RoomsScreen(navController, dataViewModel) }
+            composable("login") {
+                LoginScreen(navController, authViewModel = viewModel(factory = factory)) // Use factory
+            }
+            composable("cadastro") {
+                CadastroScreen(navController, authViewModel = viewModel(factory = factory)) // Use factory
+            }
+            composable("salas") {
+                RoomsScreen(
+                    navController = navController,
+                    roomViewModel = dataViewModel,
+                    /* salaViewModel = viewModel(factory = factory)*/
+                )
+            }
             composable("chat") { ChatScreen(audioRecorderViewModel, navController, dataViewModel) }
-            composable("user-profile") { UserProfileScreen(navController) }
-            composable("search-user") { SearchUserScreen(navController, dataViewModel) }
-            composable("searched-user-profile") { SearchedUserProfileScreen(navController, dataViewModel) }
-            composable("room-members") { RoomMembersScreen(navController, dataViewModel) }
+            composable("user-profile") {
+                UserProfileScreen(
+                    navController = navController,
+                    /*userViewModel = viewModel(factory = factory)*/
+                )
+            }
+            composable("search-user") {
+                SearchUserScreen(
+                    navController = navController,
+                    dataViewModel = dataViewModel,
+                    /*userViewModel = viewModel(factory = factory)*/
+                )
+            }
+            composable("searched-user-profile") {
+                SearchedUserProfileScreen(
+                    navController = navController,
+                    dataViewModel = dataViewModel,
+                    /* userViewModel = viewModel(factory = factory)*/
+                )
+            }
+            composable("room-members") {
+                RoomMembersScreen(
+                    navController = navController,
+                    dataViewModel = dataViewModel,
+                    /* salaViewModel = viewModel(factory = factory)*/
+                )
+            }
         }
     }
 }
@@ -114,5 +152,7 @@ fun DefaultBackIcon(navController: NavController) {
 @Composable
 @Preview
 fun Preview(){
-    CajuTalkApp()
+    val application = LocalContext.current.applicationContext as Application
+    val factory = ViewModelFactory(application)
+    CajuTalkApp(factory)
 }

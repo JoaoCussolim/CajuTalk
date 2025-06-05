@@ -6,8 +6,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.app.cajutalk.data.repository.SalaRepository
-import com.app.cajutalk.network.ApiService
-import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.EntrarSalaDto
 import com.app.cajutalk.network.models.SalaChatDto
 import com.app.cajutalk.network.models.SalaCreateDto
@@ -15,13 +13,7 @@ import com.app.cajutalk.network.models.UsuarioDaSalaDto
 import com.app.cajutalk.network.models.UsuarioSalaDto
 import kotlinx.coroutines.launch
 
-class SalaViewModel(application: Application) : AndroidViewModel(application) {
-    private val salaRepository: SalaRepository
-
-    init {
-        val apiService = RetrofitClient.createService(application, ApiService::class.java)
-        salaRepository = SalaRepository(apiService)
-    }
+class SalaViewModel(application: Application, private val salaRepository: SalaRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _createSalaResult = MutableLiveData<Result<SalaChatDto>>()
     val createSalaResult: LiveData<Result<SalaChatDto>> = _createSalaResult

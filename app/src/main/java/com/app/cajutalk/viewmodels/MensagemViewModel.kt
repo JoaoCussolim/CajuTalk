@@ -7,18 +7,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.app.cajutalk.data.repository.MensagemRepository
-import com.app.cajutalk.network.ApiService
-import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.MensagemDto
 import kotlinx.coroutines.launch
 
-class MensagemViewModel(application: Application) : AndroidViewModel(application) {
-    private val mensagemRepository: MensagemRepository
-
-    init {
-        val apiService = RetrofitClient.createService(application, ApiService::class.java)
-        mensagemRepository = MensagemRepository(apiService, application.applicationContext)
-    }
+class MensagemViewModel(application: Application, private val mensagemRepository: MensagemRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _enviarMensagemResult = MutableLiveData<Result<MensagemDto>>()
     val enviarMensagemResult: LiveData<Result<MensagemDto>> = _enviarMensagemResult

@@ -6,20 +6,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.app.cajutalk.data.repository.UserRepository
-import com.app.cajutalk.network.ApiService
-import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.Usuario
 import com.app.cajutalk.network.models.UsuarioDto
 import com.app.cajutalk.network.models.UsuarioUpdateDto
 import kotlinx.coroutines.launch
 
-class UserViewModel(application: Application) : AndroidViewModel(application) {
-    private val userRepository: UserRepository
-
-    init {
-        val apiService = RetrofitClient.createService(application, ApiService::class.java)
-        userRepository = UserRepository(apiService, application.applicationContext)
-    }
+class UserViewModel(application: Application, private val userRepository: UserRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _userById = MutableLiveData<Result<UsuarioDto>>()
     val userById: LiveData<Result<UsuarioDto>> = _userById
