@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.app.cajutalk.data.repository.AuthRepository
+import com.app.cajutalk.data.repository.FileUploadRepository
 import com.app.cajutalk.data.repository.MensagemRepository
 import com.app.cajutalk.data.repository.SalaRepository
 import com.app.cajutalk.data.repository.UserRepository
@@ -27,7 +28,8 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(SalaViewModel::class.java) -> {
                 val salaRepository = SalaRepository(apiService)
-                SalaViewModel(application, salaRepository) as T
+                val fileUploadRepository = FileUploadRepository(apiService, application.applicationContext)
+                SalaViewModel(application, salaRepository, fileUploadRepository) as T
             }
             modelClass.isAssignableFrom(UserViewModel::class.java) -> {
                 val userRepository = UserRepository(apiService, application.applicationContext)

@@ -1,10 +1,12 @@
 package com.app.cajutalk.viewmodels
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.app.cajutalk.data.repository.FileUploadRepository
 import com.app.cajutalk.data.repository.SalaRepository
 import com.app.cajutalk.network.models.EntrarSalaDto
 import com.app.cajutalk.network.models.SalaChatDto
@@ -13,7 +15,7 @@ import com.app.cajutalk.network.models.UsuarioDaSalaDto
 import com.app.cajutalk.network.models.UsuarioSalaDto
 import kotlinx.coroutines.launch
 
-class SalaViewModel(application: Application, private val salaRepository: SalaRepository) : AndroidViewModel(application) { // Updated constructor
+class SalaViewModel(application: Application, private val salaRepository: SalaRepository, private val fileUploadRepository: FileUploadRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _createSalaResult = MutableLiveData<Result<SalaChatDto>>()
     val createSalaResult: LiveData<Result<SalaChatDto>> = _createSalaResult
@@ -135,6 +137,24 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
             val result = salaRepository.getRelacaoUsuarioSala(salaId, usuarioId)
             _relacaoUsuarioSala.postValue(result)
             _isLoading.postValue(false)
+        }
+    }
+
+    fun createSalaComImagem(salaCreateDto: SalaCreateDto, imageUri: Uri?) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            if (imageUri != null) {
+                val uploadResult = fileUploadRepository.uploadFile(imageUri)
+                uploadResult.onSuccess { response ->
+                    val salaComImagem = salaCreateDto.copy(FotoPerfilURL = response.url)
+                    createSala(salaComImagem)
+                }.onFailure { error ->
+                    _createSalaResult.postValue(Result.failure(error))
+                    _isLoading.postValue(false)
+                }
+            } else {
+                createSala(salaCreateDto)
+            }
         }
     }
 }

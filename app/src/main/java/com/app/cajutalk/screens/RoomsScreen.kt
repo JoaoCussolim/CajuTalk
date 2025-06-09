@@ -33,6 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -41,8 +42,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,12 +70,15 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
 import com.app.cajutalk.classes.Sala
+import com.app.cajutalk.network.models.SalaChatDto
+import com.app.cajutalk.network.models.SalaCreateDto
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.viewmodels.DataViewModel
+import com.app.cajutalk.viewmodels.SalaViewModel
 
 @Composable
-fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
+fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (SalaCreateDto, Uri) -> Unit) {
     var nomeSala by remember { mutableStateOf("") }
     var isPrivada by remember { mutableStateOf(false) }
     var senhaSala by remember { mutableStateOf("") }
@@ -178,16 +184,13 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (Sala) -> Unit) {
             Button(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                 onClick = {
-                    val novaSala = Sala(
-                        nome = nomeSala,
-                        membros = listOf(mainUser),
-                        senha = senhaSala,
-                        imageUrl = imageUrl,
-                        mensagens = mutableListOf(),
-                        criador = mainUser,
-                        privado = isPrivada
+                    val novaSalaDto = SalaCreateDto(
+                        Nome = nomeSala,
+                        Publica = !isPrivada,
+                        Senha = if (isPrivada) senhaSala else null,
+                        FotoPerfilURL = null // Será preenchido pelo ViewModel
                     )
-                    onCreate(novaSala)
+                    selectedImageUri?.let { onCreate(novaSalaDto, it) }
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -287,7 +290,7 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
 }
 
 @Composable
-fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewModel) {
+fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: DataViewModel) {
     var mostrarDialogo by remember { mutableStateOf(false) }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -306,7 +309,7 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
             .padding(8.dp)
             .clickable {
                 //roomViewModel.estadoSala.sala = sala
-                if(sala.privado == true){
+                if(!sala.Publica){
                     mostrarDialogo = true
                 }else{
                     navController.navigate("chat")
@@ -320,7 +323,7 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
                 .clip(CircleShape)
         ) {
             AsyncImage(
-                model = sala.imageUrl,
+                model = sala.FotoPerfilURL,
                 contentDescription = "Ícone da Sala",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -329,10 +332,10 @@ fun RoomItem(sala: Sala, navController : NavController, roomViewModel: DataViewM
         Spacer(modifier = Modifier.width(8.dp))
 
         Column {
-            Text(text = sala.nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
+            Text(text = sala.Nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
                 R.font.lexend
             )))
-            Text(text = sala.getMembrosToString(), fontSize = 12.sp, color = Color.Gray, fontFamily = FontFamily(Font(
+            Text(text = if (sala.Publica) "Pública" else "Privada", fontSize = 12.sp, color = if (sala.Publica) Color.Green else Color.Red, fontFamily = FontFamily(Font(
                 R.font.lexend
             )))
         }
@@ -418,81 +421,18 @@ fun RoomsScreenHeader(navController: NavController) {
 }
 
 @Composable
-fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
+fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
     var mostrarDialogo by remember { mutableStateOf(false) }
-    val salasExplorar = remember {
-        mutableStateListOf(
-        Sala(
-            nome = "Exército de Dragões",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://rodoinside.com.br/wp-content/uploads/2015/12/sopro-do-dragao.jpg",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército de Pokémon",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://archives.bulbagarden.net/media/upload/2/28/Arceus_Adventures.png",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército de Banana",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://cdn.pixabay.com/photo/2016/10/27/09/45/banana-1773796_1280.png",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército Genérico",
-            membros = listOf(antares),
-            senha = "",
-            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnXxaw9sq2phxTmVK8kJb-bMOOj6HTb_TXLQ&s",
-            mensagens = mutableListOf(),
-            criador = antares,
-            privado = false,
-        )
-    )
-    }
-    val salasUsuario = remember {
-        mutableStateListOf(
-        Sala(
-            nome = "Exército de Sombras",
-            membros = listOf(mainUser, beru, igris, bellion),
-            senha = "",
-            imageUrl = "https://criticalhits.com.br/wp-content/uploads/2025/01/Solo-Leveling-Reawakening-Movie-696x392.jpg",
-            mensagens = mutableListOf(),
-            criador = mainUser,
-            privado = false,
-        ),
-        Sala(
-            nome = "Exército Escondido \uD83D\uDE08",
-            membros = listOf(mainUser, chaHaeIn),
-            senha = "amor123",
-            imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTf3oWVeZdxwlFvz0usloJnSvUqR_xee4G6zQ&s",
-            mensagens = mutableListOf(),
-            criador = mainUser,
-            privado = true,
-        )
-    )
+    val salasResult by salaViewModel.allSalas.observeAsState()
+    val isLoading by salaViewModel.isLoading.observeAsState(initial = false)
+
+    LaunchedEffect(Unit) {
+        salaViewModel.getAllSalas()
     }
 
     var searchText by remember { mutableStateOf("") }
-
-    val salasFiltradas by remember {
-        derivedStateOf {
-            val salas = if (exibirPublicas) salasExplorar else salasUsuario
-            salas.filter { it.nome.contains(searchText, ignoreCase = true) }
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -593,8 +533,8 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
                     if (mostrarDialogo) {
                         CreateRoomDialog(
                             onDismiss = { mostrarDialogo = false },
-                            onCreate = { sala ->
-                                salasUsuario.add(sala)
+                            onCreate = { salaDto, uri ->
+                                salaViewModel.createSalaComImagem(salaDto, uri)
                             }
                         )
                     }
@@ -644,9 +584,18 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel) {
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                LazyColumn {
-                    items(salasFiltradas) { sala ->
-                        RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel)
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else {
+                    salasResult?.onSuccess { salas ->
+                        LazyColumn {
+                            items(salas) { sala ->
+                                RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel)
+                            }
+                        }
+                    }
+                    salasResult?.onFailure { error ->
+                        Text("Erro ao carregar salas: ${error.message}")
                     }
                 }
             }

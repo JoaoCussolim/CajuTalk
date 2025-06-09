@@ -99,4 +99,15 @@ interface ApiService {
 
     @GET("mensagens/sala/{idSala}")
     suspend fun obterMensagensPorSala(@Path("idSala") idSala: Int): Response<List<MensagemDto>>
+
+    @Multipart
+    @POST("upload/file")
+    suspend fun uploadFile(
+        @Part file: MultipartBody.Part
+    ): Response<UploadResponse>
+
+    @DELETE("upload/{fileName}")
+    suspend fun deleteFile(
+        @Path("fileName") fileName: String
+    ): Response<Void>
 }
