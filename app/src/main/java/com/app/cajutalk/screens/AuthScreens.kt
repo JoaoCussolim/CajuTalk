@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -99,17 +100,19 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel) { //
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    loginResult?.let { result ->
-        if (result.isSuccess) {
-            Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
-            errorMessage = null
-            navController.navigate("salas") {
-                popUpTo("login") { inclusive = true }
+    LaunchedEffect(loginResult) {
+        loginResult?.let { result ->
+            if (result.isSuccess) {
+                Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
+                navController.navigate("salas") {
+                    popUpTo("login") { inclusive = true }
+                }
+                authViewModel.onLoginResultConsumed() // Consome o evento
+            } else {
+                val exception = result.exceptionOrNull()
+                errorMessage = exception?.message ?: "Erro desconhecido no login."
+                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             }
-        } else {
-            val exception = result.exceptionOrNull()
-            errorMessage = exception?.message ?: "Erro desconhecido no login."
-            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -268,17 +271,19 @@ fun CadastroScreen(navController: NavController, authViewModel: AuthViewModel) {
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    registerResult?.let { result ->
-        if (result.isSuccess) {
-            Toast.makeText(context, "Cadastro bem-sucedido!", Toast.LENGTH_SHORT).show()
-            errorMessage = null
-            navController.navigate("salas") {
-                popUpTo("cadastro") { inclusive = true }
+    LaunchedEffect(registerResult) {
+        registerResult?.let { result ->
+            if (result.isSuccess) {
+                Toast.makeText(context, "Cadastro bem-sucedido!", Toast.LENGTH_SHORT).show()
+                navController.navigate("salas") {
+                    popUpTo("cadastro") { inclusive = true }
+                }
+                authViewModel.onRegisterResultConsumed() // Consome o evento
+            } else {
+                val exception = result.exceptionOrNull()
+                errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
+                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             }
-        } else {
-            val exception = result.exceptionOrNull()
-            errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
-            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
         }
     }
 

@@ -70,19 +70,21 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
 import com.app.cajutalk.classes.Sala
+import com.app.cajutalk.network.models.EntrarSalaDto
 import com.app.cajutalk.network.models.SalaChatDto
 import com.app.cajutalk.network.models.SalaCreateDto
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
+import com.app.cajutalk.viewmodels.AuthViewModel
 import com.app.cajutalk.viewmodels.DataViewModel
 import com.app.cajutalk.viewmodels.SalaViewModel
 
 @Composable
-fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (SalaCreateDto, Uri) -> Unit) {
+fun CreateRoomDialog(roomViewModel : DataViewModel, onDismiss: () -> Unit, onCreate: (SalaCreateDto, Uri) -> Unit) {
     var nomeSala by remember { mutableStateOf("") }
     var isPrivada by remember { mutableStateOf(false) }
     var senhaSala by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf(mainUser.imageUrl) }
+    var imageUrl by remember { mutableStateOf(roomViewModel.usuarioLogado?.FotoPerfilURL) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -210,16 +212,36 @@ fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (SalaCreateDto, Uri) -> Un
     )
 }
 
+
 @Composable
-fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavController, onDismiss: () -> Unit) {
+fun EnterPrivateRoomDialog(
+    roomViewModel: DataViewModel,
+    navController: NavController,
+    salaViewModel: SalaViewModel,
+    onDismiss: () -> Unit
+) {
     var senhaSala by remember { mutableStateOf("") }
-    var senhaIncorreta by remember { mutableStateOf(false) }
+    val entrarSalaResult by salaViewModel.entrarSalaResult.observeAsState()
+    var showError by remember { mutableStateOf(false) }
+    val isLoading by salaViewModel.isLoading.observeAsState(false)
+
+    // Efeito para reagir ao resultado da tentativa de entrar na sala
+    LaunchedEffect(entrarSalaResult) {
+        entrarSalaResult?.let { result ->
+            if (result.isSuccess) {
+                navController.navigate("chat")
+                onDismiss()
+            } else {
+                showError = true
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.Nome}",
+                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.Nome ?: ""}",
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontSize = 22.sp,
                 color = ACCENT_COLOR,
@@ -232,9 +254,9 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (senhaIncorreta) {
+                if (showError) {
                     Text(
-                        text = "Senha incorreta. Tente novamente.",
+                        text = "Senha incorreta ou erro ao entrar na sala.",
                         color = Color.Red,
                         fontSize = 14.sp,
                         fontFamily = FontFamily(Font(R.font.lexend)),
@@ -249,7 +271,7 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
                     value = senhaSala,
                     onValueChange = {
                         senhaSala = it
-                        senhaIncorreta = false // limpa o erro quando começa a digitar novamente
+                        showError = false // Limpa o erro ao digitar novamente
                     },
                     label = { Text(text = "Senha", color = Color(0xFFF08080)) },
                     visualTransformation = PasswordVisualTransformation(),
@@ -257,7 +279,8 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
                         focusedBorderColor = ACCENT_COLOR,
                         cursorColor = ACCENT_COLOR
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = isLoading
                 )
             }
         },
@@ -265,16 +288,20 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
             Button(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                 onClick = {
-                    if (senhaSala == roomViewModel.estadoSala.sala?.Nome) {
-                        navController.navigate("chat")
-                        onDismiss()
-                    } else {
-                        senhaIncorreta = true
+                    val salaId = roomViewModel.estadoSala.sala?.ID
+                    if (salaId != null) {
+                        val entrarSalaDto = EntrarSalaDto(SalaId = salaId, Senha = senhaSala)
+                        salaViewModel.entrarSala(entrarSalaDto)
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
             ) {
-                Text("Entrar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                } else {
+                    Text("Entrar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
+                }
             }
         },
         dismissButton = {
@@ -290,7 +317,7 @@ fun EnterPrivateRoomDialog(roomViewModel: DataViewModel, navController: NavContr
 }
 
 @Composable
-fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: DataViewModel) {
+fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel) {
     var mostrarDialogo by remember { mutableStateOf(false) }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -299,6 +326,7 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
         EnterPrivateRoomDialog(
             roomViewModel,
             navController,
+            salaViewModel,
             onDismiss = { mostrarDialogo = false },
         )
     }
@@ -312,6 +340,8 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
                 if(!sala.Publica){
                     mostrarDialogo = true
                 }else{
+                    val entrarSalaDto = EntrarSalaDto(SalaId = sala.ID, Senha = null)
+                    salaViewModel.entrarSala(entrarSalaDto)
                     navController.navigate("chat")
                 }
             },
@@ -322,17 +352,20 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
                 .size(50.dp)
                 .clip(CircleShape)
         ) {
+            val secureUrl = sala.FotoPerfilURL?.replace("http://", "https://")
+
             AsyncImage(
-                model = sala.FotoPerfilURL,
+                model = secureUrl,
                 contentDescription = "Ícone da Sala",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = R.drawable.placeholder_image)
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
 
         Column {
-            Text(text = sala.Nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
+            Text(text = sala.Nome ?: "Nome Indisponível", fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
                 R.font.lexend
             )))
             Text(text = if (sala.Publica) "Pública" else "Privada", fontSize = 12.sp, color = if (sala.Publica) Color.Green else Color.Red, fontFamily = FontFamily(Font(
@@ -343,7 +376,7 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
 }
 
 @Composable
-fun MenuDropdown(navController: NavController) {
+fun MenuDropdown(navController: NavController, authViewModel: AuthViewModel) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
@@ -373,9 +406,14 @@ fun MenuDropdown(navController: NavController) {
                 text = { Text(text = "Sair", fontFamily = FontFamily(Font(R.font.lexend)), color = Color(0xFFFF7094)) },
                 onClick = {
                     menuExpanded = false
-                    // Adicione aqui a lógica para logout, por exemplo:
-                    // auth.signOut()
-                    navController.navigate("login")
+                    authViewModel.logout()
+
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -383,7 +421,7 @@ fun MenuDropdown(navController: NavController) {
 }
 
 @Composable
-fun RoomsScreenHeader(navController: NavController) {
+fun RoomsScreenHeader(navController: NavController, roomViewModel: DataViewModel, authViewModel: AuthViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -397,7 +435,7 @@ fun RoomsScreenHeader(navController: NavController) {
                 .clip(CircleShape)
         ) {
             AsyncImage(
-                model = mainUser.imageUrl,
+                model = roomViewModel.usuarioLogado?.FotoPerfilURL ?: R.drawable.placeholder_image,
                 contentDescription = "Ícone do Usuário",
                 modifier = Modifier
                     .fillMaxSize()
@@ -416,12 +454,12 @@ fun RoomsScreenHeader(navController: NavController) {
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.width(32.dp))
-        MenuDropdown(navController)
+        MenuDropdown(navController, authViewModel)
     }
 }
 
 @Composable
-fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel) {
+fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel, authViewModel: AuthViewModel) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
     var mostrarDialogo by remember { mutableStateOf(false) }
@@ -449,7 +487,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            RoomsScreenHeader(navController)
+            RoomsScreenHeader(navController, roomViewModel, authViewModel)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -532,6 +570,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
                     }
                     if (mostrarDialogo) {
                         CreateRoomDialog(
+                            roomViewModel,
                             onDismiss = { mostrarDialogo = false },
                             onCreate = { salaDto, uri ->
                                 salaViewModel.createSalaComImagem(salaDto, uri)
@@ -590,12 +629,12 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
                     salasResult?.onSuccess { salas ->
                         LazyColumn {
                             items(salas) { sala ->
-                                RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel)
+                                RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
                             }
                         }
                     }
                     salasResult?.onFailure { error ->
-                        Text("Erro ao carregar salas: ${error.message}")
+                        Text("Erro ao carregar salas: ${error.message ?: "Erro desconhecido"}")
                     }
                 }
             }

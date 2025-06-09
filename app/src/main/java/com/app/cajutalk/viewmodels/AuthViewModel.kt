@@ -11,13 +11,13 @@ import com.app.cajutalk.network.models.RegisterModel
 import com.app.cajutalk.network.models.TokenResponse
 import kotlinx.coroutines.launch
 
-class AuthViewModel(application: Application, private val authRepository: AuthRepository) : AndroidViewModel(application)  { // Updated constructor
+class AuthViewModel(application: Application, private val authRepository: AuthRepository) : AndroidViewModel(application) {
 
-    private val _loginResult = MutableLiveData<Result<TokenResponse>>()
-    val loginResult: LiveData<Result<TokenResponse>> = _loginResult
+    private val _loginResult = MutableLiveData<Result<TokenResponse>?>()
+    val loginResult: LiveData<Result<TokenResponse>?> = _loginResult
 
-    private val _registerResult = MutableLiveData<Result<TokenResponse>>()
-    val registerResult: LiveData<Result<TokenResponse>> = _registerResult
+    private val _registerResult = MutableLiveData<Result<TokenResponse>?>()
+    val registerResult: LiveData<Result<TokenResponse>?> = _registerResult
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
@@ -38,6 +38,14 @@ class AuthViewModel(application: Application, private val authRepository: AuthRe
             _registerResult.postValue(result)
             _isLoading.postValue(false)
         }
+    }
+
+    fun onLoginResultConsumed() {
+        _loginResult.value = null
+    }
+
+    fun onRegisterResultConsumed() {
+        _registerResult.value = null
     }
 
     fun logout() {

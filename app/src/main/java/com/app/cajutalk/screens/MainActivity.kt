@@ -30,6 +30,7 @@ import androidx.navigation.compose.*
 import com.app.cajutalk.classes.User
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import com.app.cajutalk.viewmodels.AudioRecorderViewModel
+import com.app.cajutalk.viewmodels.AuthViewModel
 import com.app.cajutalk.viewmodels.DataViewModel
 import com.app.cajutalk.viewmodels.ViewModelFactory // Import the ViewModelFactory
 
@@ -80,11 +81,18 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
     val navController = rememberNavController()
     val audioRecorderViewModel = AudioRecorderViewModel()
     val dataViewModel: DataViewModel = viewModel() // DataViewModel doesn't require factory as it has no dependencies
+    val authViewModel: AuthViewModel = viewModel(factory = factory) // Obtenha o AuthViewModel aqui
+
+    val startDestination = if (authViewModel.isLoggedIn()) {
+        "salas"
+    } else {
+        "login"
+    }
 
     FocusClearContainer {
         NavHost(
             navController = navController,
-            startDestination = "cadastro",
+            startDestination = startDestination,
             enterTransition = { fadeIn(animationSpec = tween(300)) },
             exitTransition = { fadeOut(animationSpec = tween(300)) },
             popEnterTransition = { fadeIn(animationSpec = tween(300)) },
@@ -100,7 +108,8 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
                 RoomsScreen(
                     navController = navController,
                     roomViewModel = dataViewModel,
-                    salaViewModel = viewModel(factory = factory)
+                    salaViewModel = viewModel(factory = factory),
+                    authViewModel = viewModel(factory = factory)
                 )
             }
             composable("chat") { ChatScreen(audioRecorderViewModel, navController, dataViewModel) }
