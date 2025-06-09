@@ -99,10 +99,14 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
             popExitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
             composable("login") {
-                LoginScreen(navController, authViewModel = viewModel(factory = factory)) // Use factory
+                LoginScreen(navController, authViewModel = viewModel(factory = factory), userViewModel = viewModel(factory = factory), // Adicione esta linha
+                    dataViewModel = dataViewModel                   // Adicione esta linha
+                ) // Use factory
             }
             composable("cadastro") {
-                CadastroScreen(navController, authViewModel = viewModel(factory = factory)) // Use factory
+                CadastroScreen(navController, authViewModel = viewModel(factory = factory), userViewModel = viewModel(factory = factory), // Adicione esta linha
+                    dataViewModel = dataViewModel                   // Adicione esta linha
+                ) // Use factory
             }
             composable("salas") {
                 RoomsScreen(

@@ -47,6 +47,8 @@ import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
 import com.app.cajutalk.viewmodels.AuthViewModel
+import com.app.cajutalk.viewmodels.DataViewModel
+import com.app.cajutalk.viewmodels.UserViewModel
 
 @Composable
 fun WaveBackground(color: Color, modifier: Modifier = Modifier) {
@@ -90,28 +92,49 @@ fun AuthHeader() {
 }
 
 @Composable
-fun LoginScreen(navController: NavController, authViewModel: AuthViewModel) { // Added authViewModel parameter
-    val loginResult by authViewModel.loginResult.observeAsState()
-    val isLoading by authViewModel.isLoading.observeAsState(initial = false)
-
+fun LoginScreen(navController: NavController, authViewModel: AuthViewModel, userViewModel: UserViewModel,
+                dataViewModel: DataViewModel
+) {
     val context = LocalContext.current
-
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var loginTriggered by remember { mutableStateOf(false) }
+
+    val loginResult by authViewModel.loginResult.observeAsState()
+    val userDetailsResult by userViewModel.currentUserDetails.observeAsState()
+    val isLoadingAuth by authViewModel.isLoading.observeAsState(false)
+    val isLoadingUser by userViewModel.isLoading.observeAsState(false)
+    val isLoading = isLoadingAuth || isLoadingUser
 
     LaunchedEffect(loginResult) {
-        loginResult?.let { result ->
-            if (result.isSuccess) {
+        loginResult?.onSuccess {
+            userViewModel.getCurrentUserDetails()
+        }
+        loginResult?.onFailure { exception ->
+            errorMessage = exception.message ?: "Erro desconhecido no login."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            authViewModel.onLoginResultConsumed()
+        }
+    }
+
+    LaunchedEffect(userDetailsResult) {
+        userDetailsResult?.onSuccess { userDto ->
+            // Apenas executa se o login tiver sido disparado para evitar re-navegação
+            if(loginResult?.isSuccess == true) {
+                dataViewModel.usuarioLogado = userDto // Ponto chave: Armazena o usuário logado
                 Toast.makeText(context, "Login bem-sucedido!", Toast.LENGTH_SHORT).show()
                 navController.navigate("salas") {
                     popUpTo("login") { inclusive = true }
                 }
-                authViewModel.onLoginResultConsumed() // Consome o evento
-            } else {
-                val exception = result.exceptionOrNull()
-                errorMessage = exception?.message ?: "Erro desconhecido no login."
+                authViewModel.onLoginResultConsumed() // Limpa o evento de login
+            }
+        }
+        userDetailsResult?.onFailure { exception ->
+            if(loginResult?.isSuccess == true) {
+                errorMessage = "Falha ao carregar dados do usuário: ${exception.message}"
                 Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                authViewModel.onLoginResultConsumed()
             }
         }
     }
@@ -259,30 +282,50 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel) { //
 }
 
 @Composable
-fun CadastroScreen(navController: NavController, authViewModel: AuthViewModel) { // Added authViewModel parameter
-    val registerResult by authViewModel.registerResult.observeAsState()
-    val isLoading by authViewModel.isLoading.observeAsState(initial = false)
-
+fun CadastroScreen(navController: NavController, authViewModel: AuthViewModel,userViewModel: UserViewModel,
+                   dataViewModel: DataViewModel ) { // Added authViewModel parameter
     val context = LocalContext.current
-
     var login by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val registerResult by authViewModel.registerResult.observeAsState()
+    val userDetailsResult by userViewModel.currentUserDetails.observeAsState()
+    val isLoadingAuth by authViewModel.isLoading.observeAsState(false)
+    val isLoadingUser by userViewModel.isLoading.observeAsState(false)
+    val isLoading = isLoadingAuth || isLoadingUser
+
+    // Efeito 1: Dispara a busca de dados do usuário após registro bem-sucedido
     LaunchedEffect(registerResult) {
-        registerResult?.let { result ->
-            if (result.isSuccess) {
+        registerResult?.onSuccess {
+            userViewModel.getCurrentUserDetails()
+        }
+        registerResult?.onFailure { exception ->
+            errorMessage = exception.message ?: "Erro desconhecido no cadastro."
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            authViewModel.onRegisterResultConsumed()
+        }
+    }
+
+    // Efeito 2: Salva os dados do usuário e navega após a busca ser concluída
+    LaunchedEffect(userDetailsResult) {
+        userDetailsResult?.onSuccess { userDto ->
+            if (registerResult?.isSuccess == true) {
+                dataViewModel.usuarioLogado = userDto
                 Toast.makeText(context, "Cadastro bem-sucedido!", Toast.LENGTH_SHORT).show()
                 navController.navigate("salas") {
                     popUpTo("cadastro") { inclusive = true }
                 }
-                authViewModel.onRegisterResultConsumed() // Consome o evento
-            } else {
-                val exception = result.exceptionOrNull()
-                errorMessage = exception?.message ?: "Erro desconhecido no cadastro."
+                authViewModel.onRegisterResultConsumed()
+            }
+        }
+        userDetailsResult?.onFailure { exception ->
+            if (registerResult?.isSuccess == true) {
+                errorMessage = "Falha ao carregar dados do usuário: ${exception.message}"
                 Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                authViewModel.onRegisterResultConsumed()
             }
         }
     }
