@@ -99,34 +99,36 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
             composable("salas") {
                 RoomsScreen(
                     navController = navController,
-                    salaViewModel = viewModel(factory = factory),
-                    dataViewModel = dataViewModel
+                    roomViewModel = dataViewModel,
+                    /* salaViewModel = viewModel(factory = factory)*/
                 )
             }
             composable("chat") { ChatScreen(audioRecorderViewModel, navController, dataViewModel) }
             composable("user-profile") {
                 UserProfileScreen(
-                    navController = navController
+                    navController = navController,
+                    /*userViewModel = viewModel(factory = factory)*/
                 )
             }
             composable("search-user") {
                 SearchUserScreen(
                     navController = navController,
-                    dataViewModel = dataViewModel
+                    dataViewModel = dataViewModel,
+                    /*userViewModel = viewModel(factory = factory)*/
                 )
             }
             composable("searched-user-profile") {
                 SearchedUserProfileScreen(
                     navController = navController,
-                    dataViewModel = dataViewModel
+                    dataViewModel = dataViewModel,
+                    /* userViewModel = viewModel(factory = factory)*/
                 )
             }
             composable("room-members") {
                 RoomMembersScreen(
                     navController = navController,
                     dataViewModel = dataViewModel,
-                    salaViewModel = viewModel(factory = factory),
-                    userViewModel = viewModel(factory = factory),
+                    /* salaViewModel = viewModel(factory = factory)*/
                 )
             }
         }

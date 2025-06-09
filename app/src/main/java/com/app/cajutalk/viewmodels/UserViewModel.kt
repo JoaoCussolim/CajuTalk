@@ -1,19 +1,17 @@
 package com.app.cajutalk.viewmodels
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.app.cajutalk.data.repository.MensagemRepository
 import com.app.cajutalk.data.repository.UserRepository
 import com.app.cajutalk.network.models.Usuario
 import com.app.cajutalk.network.models.UsuarioDto
 import com.app.cajutalk.network.models.UsuarioUpdateDto
 import kotlinx.coroutines.launch
 
-class UserViewModel(application: Application, private val userRepository: UserRepository, private val mensagemRepository: MensagemRepository) : AndroidViewModel(application) { // Updated constructor
+class UserViewModel(application: Application, private val userRepository: UserRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _userById = MutableLiveData<Result<UsuarioDto>>()
     val userById: LiveData<Result<UsuarioDto>> = _userById
@@ -42,13 +40,6 @@ class UserViewModel(application: Application, private val userRepository: UserRe
             val result = userRepository.getUserById(userId)
             _userById.postValue(result)
             _isLoading.postValue(false)
-        }
-    }
-
-    fun uploadProfileImage(uri: Uri, callback: (Result<String>) -> Unit) {
-        viewModelScope.launch {
-            val result = mensagemRepository.uploadFileAndGetUrl(uri)
-            callback(result)
         }
     }
 
