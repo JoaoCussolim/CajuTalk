@@ -336,7 +336,7 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                //roomViewModel.estadoSala.sala = sala
+                roomViewModel.estadoSala.sala = sala
                 if(!sala.Publica){
                     mostrarDialogo = true
                 }else{
@@ -629,7 +629,11 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
                     salasResult?.onSuccess { salas ->
                         LazyColumn {
                             items(salas) { sala ->
-                                RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
+                                if(exibirPublicas){
+                                    if(sala.CriadorID != roomViewModel.usuarioLogado?.ID) RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
+                                }else{
+                                   if(sala.CriadorID == roomViewModel.usuarioLogado?.ID) RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
+                                }
                             }
                         }
                     }

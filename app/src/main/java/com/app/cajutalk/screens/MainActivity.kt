@@ -112,7 +112,15 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
                     authViewModel = viewModel(factory = factory)
                 )
             }
-            composable("chat") { ChatScreen(audioRecorderViewModel, navController, dataViewModel) }
+            composable("chat") {
+                ChatScreen(
+                    viewModel = audioRecorderViewModel,
+                    navController = navController,
+                    roomViewModel = dataViewModel,
+                    mensagemViewModel = viewModel(factory = factory),
+                    userViewModel = viewModel(factory = factory)
+                )
+            }
             composable("user-profile") {
                 UserProfileScreen(
                     navController = navController,
