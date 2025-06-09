@@ -110,4 +110,44 @@ class MensagemRepository(
             return null
         }
     }
+
+    // Add this new function inside the MensagemRepository class
+    suspend fun uploadFileAndGetUrl(arquivoUri: Uri): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // A dummy room ID is required by the endpoint. Your backend might have a
+                // specific room for this, or you can use any valid ID. Let's use 1 as an example.
+                val idSalaRb = "1".toRequestBody("text/plain".toMediaTypeOrNull())
+                val tipoMensagemRb = "Imagem".toRequestBody("text/plain".toMediaTypeOrNull())
+
+                val file = getFileFromUri(applicationContext, arquivoUri)
+                if (file == null || !file.exists()) {
+                    return@withContext Result.failure(Exception("Could not access file from Uri."))
+                }
+
+                val mimeType = applicationContext.contentResolver.getType(arquivoUri) ?: "application/octet-stream"
+                val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
+                val arquivoPart = MultipartBody.Part.createFormData("Arquivo", file.name, requestFile)
+
+                // Call the existing endpoint for sending messages
+                val response = apiService.enviarMensagem(
+                    idSala = idSalaRb,
+                    conteudo = null, // No text content needed
+                    tipoMensagem = tipoMensagemRb,
+                    arquivo = arquivoPart
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    // The API should return the public URL in the 'Conteudo' field
+                    val fileUrl = response.body()!!.Conteudo
+                    Result.success(fileUrl)
+                } else {
+                    val errorMsg = response.errorBody()?.string() ?: "Failed to upload file: ${response.code()}"
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 }

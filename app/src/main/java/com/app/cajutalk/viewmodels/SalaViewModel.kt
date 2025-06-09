@@ -1,10 +1,12 @@
 package com.app.cajutalk.viewmodels
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.app.cajutalk.data.repository.MensagemRepository
 import com.app.cajutalk.data.repository.SalaRepository
 import com.app.cajutalk.network.models.EntrarSalaDto
 import com.app.cajutalk.network.models.SalaChatDto
@@ -13,7 +15,7 @@ import com.app.cajutalk.network.models.UsuarioDaSalaDto
 import com.app.cajutalk.network.models.UsuarioSalaDto
 import kotlinx.coroutines.launch
 
-class SalaViewModel(application: Application, private val salaRepository: SalaRepository) : AndroidViewModel(application) { // Updated constructor
+class SalaViewModel(application: Application, private val salaRepository: SalaRepository, private val mensagemRepository: MensagemRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _createSalaResult = MutableLiveData<Result<SalaChatDto>>()
     val createSalaResult: LiveData<Result<SalaChatDto>> = _createSalaResult
@@ -63,6 +65,14 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
             val result = salaRepository.getSalaById(salaId)
             _salaById.postValue(result)
             _isLoading.postValue(false)
+        }
+    }
+
+    fun uploadRoomImage(uri: Uri, callback: (Result<String>) -> Unit) {
+        viewModelScope.launch {
+            // This is a simplified example. You'd call your repository here.
+            val result = mensagemRepository.uploadFileAndGetUrl(uri)
+            callback(result)
         }
     }
 
