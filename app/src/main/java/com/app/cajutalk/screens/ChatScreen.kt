@@ -6,10 +6,10 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.util.Log
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
-import android.util.Log
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.Toast

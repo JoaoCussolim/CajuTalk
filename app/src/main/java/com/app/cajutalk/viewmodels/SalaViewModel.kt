@@ -32,8 +32,8 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
     private val _usersInSala = MutableLiveData<Result<List<UsuarioDaSalaDto>>>()
     val usersInSala: LiveData<Result<List<UsuarioDaSalaDto>>> = _usersInSala
 
-    private val _entrarSalaResult = MutableLiveData<Result<UsuarioSalaDto>>()
-    val entrarSalaResult: LiveData<Result<UsuarioSalaDto>> = _entrarSalaResult
+    private val _entrarSalaResult = MutableLiveData<Result<UsuarioSalaDto>?>()
+    val entrarSalaResult: LiveData<Result<UsuarioSalaDto>?> = _entrarSalaResult
 
     private val _sairSalaResult = MutableLiveData<Result<Unit>>()
     val sairSalaResult: LiveData<Result<Unit>> = _sairSalaResult
@@ -50,12 +50,22 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
+    fun onEntrarSalaResultConsumed() {
+        _entrarSalaResult.value = null
+    }
+
     fun createSala(salaCreateDto: SalaCreateDto) {
         _isLoading.value = true
         viewModelScope.launch {
             val result = salaRepository.createSala(salaCreateDto)
             _createSalaResult.postValue(result)
-            _isLoading.postValue(false)
+
+            // CORREÇÃO: Se a sala foi criada com sucesso, atualiza a lista de todas as salas.
+            if (result.isSuccess) {
+                getAllSalas()
+            } else {
+                _isLoading.postValue(false)
+            }
         }
     }
 

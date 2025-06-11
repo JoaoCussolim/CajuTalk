@@ -1,7 +1,9 @@
 package com.app.cajutalk.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -215,8 +218,7 @@ fun CreateRoomDialog(roomViewModel : DataViewModel, onDismiss: () -> Unit, onCre
 
 @Composable
 fun EnterPrivateRoomDialog(
-    roomViewModel: DataViewModel,
-    navController: NavController,
+    sala: SalaChatDto,
     salaViewModel: SalaViewModel,
     onDismiss: () -> Unit
 ) {
@@ -225,23 +227,11 @@ fun EnterPrivateRoomDialog(
     var showError by remember { mutableStateOf(false) }
     val isLoading by salaViewModel.isLoading.observeAsState(false)
 
-    // Efeito para reagir ao resultado da tentativa de entrar na sala
-    LaunchedEffect(entrarSalaResult) {
-        entrarSalaResult?.let { result ->
-            if (result.isSuccess) {
-                navController.navigate("chat")
-                onDismiss()
-            } else {
-                showError = true
-            }
-        }
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Entrar na Sala: ${roomViewModel.estadoSala.sala?.Nome ?: ""}",
+                text = "Entrar na Sala: ${sala.Nome}",
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontSize = 22.sp,
                 color = ACCENT_COLOR,
@@ -288,11 +278,8 @@ fun EnterPrivateRoomDialog(
             Button(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                 onClick = {
-                    val salaId = roomViewModel.estadoSala.sala?.ID
-                    if (salaId != null) {
-                        val entrarSalaDto = EntrarSalaDto(SalaId = salaId, Senha = senhaSala)
-                        salaViewModel.entrarSala(entrarSalaDto)
-                    }
+                    val entrarSalaDto = EntrarSalaDto(SalaId = sala.ID, Senha = senhaSala)
+                    salaViewModel.entrarSala(entrarSalaDto)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading
@@ -317,34 +304,12 @@ fun EnterPrivateRoomDialog(
 }
 
 @Composable
-fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel) {
-    var mostrarDialogo by remember { mutableStateOf(false) }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    if(mostrarDialogo) {
-        EnterPrivateRoomDialog(
-            roomViewModel,
-            navController,
-            salaViewModel,
-            onDismiss = { mostrarDialogo = false },
-        )
-    }
-
+fun RoomItem(sala: SalaChatDto, salaViewModel: SalaViewModel, onRoomClick: (SalaChatDto) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable {
-                roomViewModel.estadoSala.sala = sala
-                if(!sala.Publica){
-                    mostrarDialogo = true
-                }else{
-                    val entrarSalaDto = EntrarSalaDto(SalaId = sala.ID, Senha = null)
-                    salaViewModel.entrarSala(entrarSalaDto)
-                    navController.navigate("chat")
-                }
-            },
+            .clickable { onRoomClick(sala) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -359,18 +324,15 @@ fun RoomItem(sala: SalaChatDto, navController : NavController, roomViewModel: Da
                 contentDescription = "Ícone da Sala",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                error = painterResource(id = R.drawable.placeholder_image)
+                error = painterResource(id = R.drawable.placeholder_image),
+                placeholder = painterResource(id = R.drawable.placeholder_image)
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
 
         Column {
-            Text(text = sala.Nome ?: "Nome Indisponível", fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(
-                R.font.lexend
-            )))
-            Text(text = if (sala.Publica) "Pública" else "Privada", fontSize = 12.sp, color = if (sala.Publica) Color.Green else Color.Red, fontFamily = FontFamily(Font(
-                R.font.lexend
-            )))
+            Text(text = sala.Nome ?: "Nome Indisponível", fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = if (sala.Publica) "Pública" else "Privada", fontSize = 12.sp, color = if (sala.Publica) Color.Green else Color.Red, fontFamily = FontFamily(Font(R.font.lexend)))
         }
     }
 }
@@ -462,15 +424,59 @@ fun RoomsScreenHeader(navController: NavController, roomViewModel: DataViewModel
 fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, salaViewModel: SalaViewModel, authViewModel: AuthViewModel) {
     val bottomColor = Color(0xFFFDB361)
     var exibirPublicas by remember { mutableStateOf(false) }
-    var mostrarDialogo by remember { mutableStateOf(false) }
     val salasResult by salaViewModel.allSalas.observeAsState()
     val isLoading by salaViewModel.isLoading.observeAsState(initial = false)
+    val entrarSalaResult by salaViewModel.entrarSalaResult.observeAsState()
+    var salaParaEntrar by remember { mutableStateOf<SalaChatDto?>(null) }
+    var mostrarDialogoCriar by remember { mutableStateOf(false) }
+
+    var searchText by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         salaViewModel.getAllSalas()
     }
 
-    var searchText by remember { mutableStateOf("") }
+    LaunchedEffect(entrarSalaResult) {
+        entrarSalaResult?.let { result ->
+            result.onSuccess {
+                salaParaEntrar = null // Fecha o diálogo se estiver aberto
+                navController.navigate("chat")
+                salaViewModel.onEntrarSalaResultConsumed() // Limpa o estado
+            }.onFailure { error ->
+                Toast.makeText(
+                    context,
+                    "Erro ao entrar na sala: ${error.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                salaViewModel.onEntrarSalaResultConsumed() // Limpa o estado
+            }
+        }
+    }
+
+    val salasFiltradas by remember(
+        salasResult,
+        searchText,
+        exibirPublicas,
+        roomViewModel.usuarioLogado
+    ) {
+        derivedStateOf {
+            salasResult?.getOrNull()?.filter { sala ->
+                val correspondeBusca = sala.Nome.contains(searchText, ignoreCase = true)
+                val usuario = roomViewModel.usuarioLogado
+
+                Log.d("RoomsScreenFilter", "Sala: ${sala.Nome} | CriadorID: ${sala.CriadorID} | MeuID: ${roomViewModel.usuarioLogado?.ID} | Comparacao: ${sala.CriadorID == roomViewModel.usuarioLogado?.ID}")
+
+                val correspondeAba = if (exibirPublicas) {
+                    sala.CriadorID != usuario?.ID
+                } else {
+                    sala.CriadorID == usuario?.ID
+                }
+
+                correspondeBusca && correspondeAba
+            } ?: emptyList()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -553,28 +559,19 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { mostrarDialogo = true },
+                        onClick = { mostrarDialogoCriar = true },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF7094)
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.align(Alignment.CenterVertically)
-                    ){
+                    ) {
                         Text(
                             text = "Criar sala",
                             fontSize = 20.sp,
                             color = Color(0xFFFFFFFF),
                             fontFamily = FontFamily(Font(R.font.lexend)),
                             fontWeight = FontWeight(400)
-                        )
-                    }
-                    if (mostrarDialogo) {
-                        CreateRoomDialog(
-                            roomViewModel,
-                            onDismiss = { mostrarDialogo = false },
-                            onCreate = { salaDto, uri ->
-                                salaViewModel.createSalaComImagem(salaDto, uri)
-                            }
                         )
                     }
                     Row(
@@ -597,16 +594,20 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
                                 .focusable()
                                 .weight(1f)
                                 .padding(start = 8.dp),
-                            textStyle = TextStyle(color = Color(0xFFFF7094), fontFamily = FontFamily(Font(
-                                R.font.lexend
-                            ))),
+                            textStyle = TextStyle(
+                                color = Color(0xFFFF7094), fontFamily = FontFamily(
+                                    Font(
+                                        R.font.lexend
+                                    )
+                                )
+                            ),
                             cursorBrush = SolidColor(Color(0xFFFF7094)),
-                            decorationBox = {innerTextField ->
+                            decorationBox = { innerTextField ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                ){
-                                    if (searchText.isEmpty()){
+                                ) {
+                                    if (searchText.isEmpty()) {
                                         Text(
                                             text = "Digite aqui...",
                                             color = Color(0xFFFF7094),
@@ -623,23 +624,56 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                if (isLoading) {
+                if (isLoading && salasFiltradas.isEmpty()) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else if (salasFiltradas.isEmpty()) {
+                    Text(
+                        "Nenhuma sala encontrada.",
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 } else {
-                    salasResult?.onSuccess { salas ->
-                        LazyColumn {
-                            items(salas) { sala ->
-                                if(exibirPublicas){
-                                    if(sala.CriadorID != roomViewModel.usuarioLogado?.ID) RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
-                                }else{
-                                   if(sala.CriadorID == roomViewModel.usuarioLogado?.ID) RoomItem(sala = sala, navController = navController, roomViewModel = roomViewModel, salaViewModel = salaViewModel)
+                    LazyColumn {
+                        items(salasFiltradas, key = { it.ID }) { sala ->
+                            RoomItem(
+                                sala = sala,
+                                salaViewModel = salaViewModel,
+                                onRoomClick = { clickedSala ->
+                                    roomViewModel.estadoSala.sala = clickedSala
+                                    if (clickedSala.Publica) {
+                                        salaViewModel.entrarSala(
+                                            EntrarSalaDto(
+                                                SalaId = clickedSala.ID,
+                                                Senha = null
+                                            )
+                                        )
+                                    } else {
+                                        salaParaEntrar = clickedSala
+                                    }
                                 }
-                            }
+                            )
                         }
                     }
-                    salasResult?.onFailure { error ->
-                        Text("Erro ao carregar salas: ${error.message ?: "Erro desconhecido"}")
-                    }
+
+                }
+
+
+                if (mostrarDialogoCriar) {
+                    CreateRoomDialog(
+                        roomViewModel = roomViewModel,
+                        onDismiss = { mostrarDialogoCriar = false },
+                        onCreate = { salaDto, uri ->
+                            salaViewModel.createSalaComImagem(salaDto, uri)
+                            mostrarDialogoCriar = false
+                        }
+                    )
+                }
+
+                salaParaEntrar?.let { sala ->
+                    EnterPrivateRoomDialog(
+                        sala = sala,
+                        salaViewModel = salaViewModel,
+                        onDismiss = { salaParaEntrar = null }
+                    )
                 }
             }
         }

@@ -99,7 +99,6 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel, user
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var loginTriggered by remember { mutableStateOf(false) }
 
     val loginResult by authViewModel.loginResult.observeAsState()
     val userDetailsResult by userViewModel.currentUserDetails.observeAsState()
@@ -297,7 +296,6 @@ fun CadastroScreen(navController: NavController, authViewModel: AuthViewModel,us
     val isLoadingUser by userViewModel.isLoading.observeAsState(false)
     val isLoading = isLoadingAuth || isLoadingUser
 
-    // Efeito 1: Dispara a busca de dados do usuário após registro bem-sucedido
     LaunchedEffect(registerResult) {
         registerResult?.onSuccess {
             userViewModel.getCurrentUserDetails()
