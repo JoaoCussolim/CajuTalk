@@ -128,7 +128,11 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
         viewModelScope.launch {
             val result = salaRepository.banirUsuario(salaId, usuarioIdParaBanir)
             _banirUsuarioResult.postValue(result)
-            _isLoading.postValue(false)
+            if (result.isSuccess) {
+                getUsersInSala(salaId)
+            } else {
+                _isLoading.postValue(false)
+            }
         }
     }
 
@@ -137,7 +141,11 @@ class SalaViewModel(application: Application, private val salaRepository: SalaRe
         viewModelScope.launch {
             val result = salaRepository.desbanirUsuario(salaId, usuarioIdParaDesbanir)
             _desbanirUsuarioResult.postValue(result)
-            _isLoading.postValue(false)
+            if (result.isSuccess) {
+                getUsersInSala(salaId)
+            } else {
+                _isLoading.postValue(false)
+            }
         }
     }
 

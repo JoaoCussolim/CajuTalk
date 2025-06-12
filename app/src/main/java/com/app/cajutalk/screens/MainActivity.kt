@@ -140,14 +140,13 @@ fun CajuTalkApp(factory: ViewModelFactory) {
                 SearchedUserProfileScreen(
                     navController = navController,
                     dataViewModel = dataViewModel,
-                    /* userViewModel = viewModel(factory = factory)*/
                 )
             }
             composable("room-members") {
                 RoomMembersScreen(
                     navController = navController,
                     dataViewModel = dataViewModel,
-                    /* salaViewModel = viewModel(factory = factory)*/
+                    salaViewModel = viewModel(factory = factory)
                 )
             }
         }
