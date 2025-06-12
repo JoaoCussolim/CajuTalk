@@ -331,7 +331,7 @@ fun RoomItem(sala: SalaChatDto, salaViewModel: SalaViewModel, onRoomClick: (Sala
         Spacer(modifier = Modifier.width(8.dp))
 
         Column {
-            Text(text = sala.Nome ?: "Nome Indisponível", fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
+            Text(text = sala.Nome, fontWeight = FontWeight.Bold, color = Color.Black, fontFamily = FontFamily(Font(R.font.lexend)))
             Text(text = if (sala.Publica) "Pública" else "Privada", fontSize = 12.sp, color = if (sala.Publica) Color.Green else Color.Red, fontFamily = FontFamily(Font(R.font.lexend)))
         }
     }
@@ -391,13 +391,15 @@ fun RoomsScreenHeader(navController: NavController, roomViewModel: DataViewModel
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val fotoUsuario = roomViewModel.usuarioLogado?.FotoPerfilURL?.replace("http://", "https://")
+
         Box(
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
         ) {
             AsyncImage(
-                model = roomViewModel.usuarioLogado?.FotoPerfilURL ?: R.drawable.placeholder_image,
+                model = fotoUsuario ?: R.drawable.placeholder_image,
                 contentDescription = "Ícone do Usuário",
                 modifier = Modifier
                     .fillMaxSize()
