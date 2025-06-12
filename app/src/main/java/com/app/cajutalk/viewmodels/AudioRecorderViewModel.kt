@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -26,7 +27,6 @@ class AudioRecorderViewModel : ViewModel() {
 
     fun requestPermissions(activity: Activity) {
         val permissions = arrayOf(Manifest.permission.RECORD_AUDIO)
-
         ActivityCompat.requestPermissions(activity, permissions, 100)
     }
 
@@ -42,13 +42,22 @@ class AudioRecorderViewModel : ViewModel() {
                 throw Exception("Erro ao acessar o diretório de áudio")
             }
 
+            // O nome do arquivo com extensão .mp4 está correto para o formato que vamos usar
             val file = File(dir, "audio_${System.currentTimeMillis()}.mp4")
             audioPath = file.absolutePath
 
-            mediaRecorder = MediaRecorder().apply {
+            // MUDANÇA: Usando API Level-aware para MediaRecorder
+            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                // MUDANÇA: Formato de saída para MP4
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                // MUDANÇA: Codec de áudio para AAC (padrão para MP4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 setOutputFile(audioPath)
 
                 prepare()

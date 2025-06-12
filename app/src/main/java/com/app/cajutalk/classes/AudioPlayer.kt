@@ -3,71 +3,56 @@ package com.app.cajutalk.classes
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import java.io.File
+import android.util.Log
 
 class AudioPlayer {
     private var mediaPlayer: MediaPlayer? = null
 
-    fun playAudio(context: Context, audioPath: String, onCompletion: () -> Unit) {
-        stopAudio()
-
-        val file = File(audioPath)
-        if (!file.exists()) {
-            println("Arquivo não encontrado: $audioPath")
-            return
+    fun isPlaying(): Boolean {
+        return try {
+            mediaPlayer?.isPlaying == true
+        } catch (e: IllegalStateException) {
+            false
         }
+    }
+
+    fun playAudio(context: Context, audioUrl: String, onCompletion: () -> Unit) {
+        stopAudio() // Para e libera qualquer player anterior
 
         try {
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(context, Uri.parse(audioPath))
-                prepareAsync()
+                setDataSource(context, Uri.parse(audioUrl))
 
                 setOnPreparedListener {
-                    println("Áudio pronto! Iniciando reprodução.")
+                    Log.d("AudioPlayer", "Áudio pronto! Iniciando reprodução.")
                     start()
                 }
 
                 setOnCompletionListener {
-                    println("Reprodução concluída")
+                    Log.d("AudioPlayer", "Reprodução concluída.")
                     onCompletion()
+                    stopAudio() // Libera os recursos ao terminar
                 }
 
                 setOnErrorListener { _, what, extra ->
-                    println("Erro no MediaPlayer: what=$what, extra=$extra")
+                    Log.e("AudioPlayer", "Erro no MediaPlayer: what=$what, extra=$extra")
+                    stopAudio()
                     true
                 }
+
+                prepareAsync() // Prepara o áudio de forma assíncrona
             }
         } catch (e: Exception) {
-            println("Erro ao preparar áudio: ${e.message}")
+            Log.e("AudioPlayer", "Erro ao preparar áudio: ${e.message}")
         }
     }
-
-    fun playRawAudio(context: Context, rawResId: Int, onCompletion: () -> Unit) {
-        stopAudio()
-
-        try {
-            mediaPlayer = MediaPlayer.create(context, rawResId).apply {
-                setOnCompletionListener {
-                    println("Reprodução concluída")
-                    onCompletion()
-                    stopAudio()
-                }
-                start()
-            }
-        } catch (e: Exception) {
-            println("Erro ao reproduzir áudio raw: ${e.message}")
-        }
-    }
-
 
     fun pauseAudio() {
-        mediaPlayer?.apply {
-            if (isPlaying) {
-                pause()
-            } else {
-                start()
-            }
-        }
+        mediaPlayer?.takeIf { it.isPlaying }?.pause()
+    }
+
+    fun resumeAudio() {
+        mediaPlayer?.start()
     }
 
     fun seekTo(positionMs: Long) {
@@ -75,15 +60,15 @@ class AudioPlayer {
     }
 
     fun getCurrentPosition(): Int {
-        return mediaPlayer?.currentPosition ?: 0
+        return try {
+            mediaPlayer?.currentPosition ?: 0
+        } catch (e: IllegalStateException) {
+            0
+        }
     }
 
-    private fun stopAudio() {
-        mediaPlayer?.apply {
-            stop()
-            reset()
-            release()
-        }
+    fun stopAudio() {
+        mediaPlayer?.release()
         mediaPlayer = null
     }
 }

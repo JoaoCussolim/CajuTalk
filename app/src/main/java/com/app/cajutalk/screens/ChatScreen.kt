@@ -72,6 +72,7 @@ import com.app.cajutalk.viewmodels.UserViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import com.app.cajutalk.network.models.TipoMensagem
 
 // Funções de Bubble (ChatBubble, AudioBubble, etc.) permanecem as mesmas
 @Composable
@@ -103,41 +104,54 @@ fun formatAudioButtonDuration(seconds: Long): String {
 }
 
 @Composable
-fun AudioBubble(audioUrl: String, isUserMessage: Boolean, context: Context) {
+fun AudioBubble(audioUrl: String, isUserMessage: Boolean) {
+    val context = LocalContext.current
     val audioPlayer = remember { AudioPlayer() }
     var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableStateOf("00:00") }
-    var currentTime by remember { mutableStateOf("00:00") }
-    var totalDurationMs by remember { mutableLongStateOf(1L) }
+    var currentPositionMs by remember { mutableLongStateOf(0L) }
+    var totalDurationMs by remember { mutableLongStateOf(0L) }
+
+    // Calcula o progresso a partir da posição e duração
+    val progress = remember(currentPositionMs, totalDurationMs) {
+        if (totalDurationMs > 0) (currentPositionMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f) else 0f
+    }
+
+    val durationFormatted = remember(totalDurationMs) { formatAudioDuration(totalDurationMs) }
+    val currentTimeFormatted = remember(currentPositionMs) { formatAudioDuration(currentPositionMs) }
 
     val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
-    val shape = if (isUserMessage) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
-    else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+    val shape = if (isUserMessage) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp) else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
 
-    LaunchedEffect(audioUrl) {
+    val fullAudioUrl = remember(audioUrl) {
+        if (audioUrl.startsWith("http")) audioUrl else RetrofitClient.BASE_URL + audioUrl.removePrefix("/")
+    }
+
+    LaunchedEffect(fullAudioUrl) {
+        if (fullAudioUrl.isBlank()) return@LaunchedEffect
         try {
-            val mediaPlayer = MediaPlayer().apply {
-                setDataSource(audioUrl.replace("http://", "https://"))
+            MediaPlayer().apply {
+                setDataSource(fullAudioUrl)
                 prepare()
+                totalDurationMs = duration.toLong()
+                release()
             }
-            totalDurationMs = mediaPlayer.duration.toLong()
-            duration = formatAudioDuration(totalDurationMs)
-            mediaPlayer.release()
         } catch (e: Exception) {
-            Log.e("AudioBubble", "Falha ao preparar áudio da URL: $audioUrl", e)
-            duration = "00:00"
+            Log.e("AudioBubble", "Falha ao obter duração: $fullAudioUrl", e)
+            totalDurationMs = 0
         }
     }
 
+    // Efeito para atualizar a posição do áudio enquanto toca
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            val position = audioPlayer.getCurrentPosition().toLong()
-            currentTime = formatAudioDuration(position)
-            if (totalDurationMs > 0) {
-                progress = position.toFloat() / totalDurationMs.toFloat()
-            }
+            currentPositionMs = audioPlayer.getCurrentPosition().toLong()
             delay(100)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            audioPlayer.stopAudio()
         }
     }
 
@@ -150,11 +164,19 @@ fun AudioBubble(audioUrl: String, isUserMessage: Boolean, context: Context) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = {
-                    val secureUrl = audioUrl.replace("http://", "https://")
+                    if (totalDurationMs == 0L) return@IconButton // Não faz nada se não conseguiu carregar o áudio
+
                     if (isPlaying) {
                         audioPlayer.pauseAudio()
                     } else {
-                        audioPlayer.playAudio(context, secureUrl) { isPlaying = false }
+                        if (currentPositionMs == 0L && !audioPlayer.isPlaying()) {
+                            audioPlayer.playAudio(context, fullAudioUrl) {
+                                isPlaying = false
+                                currentPositionMs = 0L
+                            }
+                        } else {
+                            audioPlayer.resumeAudio()
+                        }
                     }
                     isPlaying = !isPlaying
                 }) {
@@ -167,8 +189,11 @@ fun AudioBubble(audioUrl: String, isUserMessage: Boolean, context: Context) {
                 Slider(
                     value = progress,
                     onValueChange = { newProgress ->
-                        progress = newProgress
-                        audioPlayer.seekTo((newProgress * totalDurationMs).toLong())
+                        if (totalDurationMs > 0) {
+                            val newPosition = (newProgress * totalDurationMs).toLong()
+                            currentPositionMs = newPosition
+                            audioPlayer.seekTo(newPosition)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(
@@ -179,10 +204,12 @@ fun AudioBubble(audioUrl: String, isUserMessage: Boolean, context: Context) {
                 )
             }
             Text(
-                text = "$currentTime / $duration",
-                color = Color.White,
+                text = "$currentTimeFormatted / $durationFormatted",
+                color = Color.White.copy(alpha = 0.7f),
                 fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.End).padding(end = 8.dp)
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(end = 8.dp)
             )
         }
     }
@@ -467,7 +494,7 @@ fun MessageRow(message: MensagemDto, isUserMessage: Boolean, showProfile: Boolea
         when (message.TipoMensagem.lowercase()) {
             "imagem" -> ImageContainer(message.Conteudo, null, isUserMessage = isUserMessage)
             "video" -> VideoPreview(message.Conteudo, isUserMessage = isUserMessage)
-            "audio" -> AudioBubble(message.Conteudo, isUserMessage = isUserMessage, context)
+            "audio" -> AudioBubble(message.Conteudo, isUserMessage = isUserMessage)
             "arquivo" -> FileBubble(message.Conteudo, isUserMessage = isUserMessage)
             else -> ChatBubble(message = message.Conteudo, isUserMessage = isUserMessage)
         }
@@ -499,6 +526,15 @@ fun ChatScreen(
         return
     }
 
+    var isRecording by remember { mutableStateOf(false) }
+    var recordingDuration by remember { mutableLongStateOf(0L) }
+    var pressStartTime by remember { mutableLongStateOf(0L) }
+
+    val buttonSize by animateDpAsState(
+        targetValue = if (isRecording) 80.dp else 50.dp,
+        animationSpec = tween(200), label = ""
+    )
+
     val bottomColor = Color(0xFFFDB361)
     var message by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<MensagemDto>() }
@@ -511,6 +547,17 @@ fun ChatScreen(
     val creatorUserResult by userViewModel.userById.observeAsState()
 
     val deleteSalaResult by salaViewModel.deleteSalaResult.observeAsState()
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            while (isRecording) {
+                recordingDuration = (System.currentTimeMillis() - pressStartTime) / 1000
+                delay(100)
+            }
+        } else {
+            recordingDuration = 0L
+        }
+    }
 
     LaunchedEffect(deleteSalaResult) {
         deleteSalaResult?.onSuccess {
@@ -580,10 +627,10 @@ fun ChatScreen(
         uri?.let {
             val mimeType = context.contentResolver.getType(it) ?: "application/octet-stream"
             val tipoMensagem = when {
-                mimeType.startsWith("image") -> "Imagem"
-                mimeType.startsWith("video") -> "Video"
-                mimeType.startsWith("audio") -> "Audio"
-                else -> "Arquivo"
+                mimeType.startsWith("image") -> "imagem"
+                mimeType.startsWith("video") -> "video"
+                mimeType.startsWith("audio") -> "audio"
+                else -> "arquivo"
             }
             Toast.makeText(context, "Enviando ${tipoMensagem.lowercase()}...", Toast.LENGTH_SHORT).show()
             mensagemViewModel.enviarMensagem(
@@ -721,31 +768,32 @@ fun ChatScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(buttonSize)
                                 .clip(CircleShape)
                                 .background(Color(0xFFFF7090))
                                 .pointerInteropFilter { event ->
-                                    if (isLoading || activity == null) return@pointerInteropFilter false
+                                    if (isLoading || activity == null || message.isNotBlank()) {
+                                        // Se estiver carregando ou se houver texto, apenas lida com o envio de texto
+                                        if (event.action == MotionEvent.ACTION_UP && message.isNotBlank()) {
+                                            val tipo = TipoMensagem.Texto.ordinal.toString()
+                                            mensagemViewModel.enviarMensagem(sala.ID, message, "texto", null)
+                                            message = ""
+                                        }
+                                        return@pointerInteropFilter true
+                                    }
+
                                     when (event.action) {
                                         MotionEvent.ACTION_DOWN -> {
-                                            if (message.isBlank()) {
-                                                if (viewModel.hasPermissions(context)) {
-                                                    viewModel.startRecording(context)
-                                                } else {
-                                                    viewModel.requestPermissions(activity)
-                                                }
-                                            }
+                                            pressStartTime = System.currentTimeMillis()
+                                            isRecording = true
+                                            viewModel.startRecording(context)
                                             true
                                         }
                                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                            if (message.isNotBlank()) {
-                                                mensagemViewModel.enviarMensagem(sala.ID, message, "Texto", null)
-                                                message = ""
-                                            } else {
-                                                viewModel.stopRecording()
-                                                viewModel.audioPath?.let { path ->
-                                                    mensagemViewModel.enviarMensagem(sala.ID, "audio", "Audio", Uri.fromFile(File(path)))
-                                                }
+                                            isRecording = false
+                                            viewModel.stopRecording()
+                                            viewModel.audioPath?.let { path ->
+                                                mensagemViewModel.enviarMensagem(sala.ID, "audio", "audio", Uri.fromFile(File(path)))
                                             }
                                             true
                                         }
@@ -756,11 +804,26 @@ fun ChatScreen(
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
+                            } else if (isRecording) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = formatAudioButtonDuration(recordingDuration),
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Image(
+                                        painter = painterResource(id = R.drawable.microfone_icon),
+                                        contentDescription = "Gravando",
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            else {
                                 val iconRes = if (message.isNotBlank()) R.drawable.send_icon else R.drawable.microfone_icon
                                 Image(
                                     painter = painterResource(id = iconRes),
-                                    contentDescription = if (message.isNotBlank()) "Enviar" else "Microfone",
+                                    contentDescription = if (message.isNotBlank()) "Enviar" else "Gravar Áudio",
                                     modifier = Modifier.size(28.dp)
                                 )
                             }

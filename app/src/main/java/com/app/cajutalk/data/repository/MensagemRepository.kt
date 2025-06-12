@@ -3,6 +3,7 @@ package com.app.cajutalk.data.repository
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import com.app.cajutalk.network.ApiService
 import com.app.cajutalk.network.models.MensagemDto
 import kotlinx.coroutines.Dispatchers
@@ -84,22 +85,36 @@ class MensagemRepository(
     }
 
     private fun getFileFromUri(context: Context, uri: Uri): File? {
+        val contentResolver = context.contentResolver
         var fileName: String? = null
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
+
+        // Tenta obter o nome do arquivo do ContentResolver (funciona para Uris de 'content://')
+        try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        fileName = cursor.getString(nameIndex)
+                    }
                 }
             }
-        }
-        if (fileName == null) {
-            fileName = "temp_file_${System.currentTimeMillis()}"
+        } catch (e: Exception) {
+            // Ignora exceções, tentaremos outros métodos
         }
 
-        val tempFile = File(context.cacheDir, fileName)
+        if (fileName == null) {
+            fileName = uri.path?.let { File(it).name }
+        }
+
+        if (fileName == null) {
+            val mimeType = contentResolver.getType(uri)
+            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            fileName = "temp_file_${System.currentTimeMillis()}" + (extension?.let { ".$it" } ?: "")
+        }
+
+        val tempFile = File(context.cacheDir, fileName!!)
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            contentResolver.openInputStream(uri)?.use { inputStream ->
                 FileOutputStream(tempFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }

@@ -47,15 +47,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-var mainUser = User(login = "FakeDoAshborn", senha = "AmoChaHaeIn", name = "Sung Jin Woo", message = "Amo meu exército", imageUrl = "https://cdn-images.dzcdn.net/images/cover/52634551c3ae630fb3f0b86b6eaed4a0/0x1900-000000-80-0-0.jpg")
-var antares = User(login = "MonarcaDragoes", senha = "OdeioAshborn", name = "Antares", message = "Vou te matar Ashborn \uD83D\uDE21", imageUrl = "https://i0.wp.com/ovicio.com.br/wp-content/uploads/2025/02/20250219-antares.webp?resize=555%2C555&ssl=1")
-var igris = User(login = "AmoMestreJinWoo", senha = "SouMelhorQueBeru", name = "Igris", message = "Mestre Jin Woo é demais \uD83D\uDE0A", imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_ZqpS-yB9uKbBrwPatsuYcvnX9Emtbz5-gw&s")
-var beru = User(login = "AmoMaisMestreJinwoo", senha = "IgrisBuxa", name = "Beru", message = "Eu > Igris", imageUrl = "https://static.beebom.com/wp-content/uploads/2025/01/beru-solo-leveling.jpg?w=1250&quality=75")
-var chaHaeIn = User(login = "OlfatoRankS", senha = "ChaHae123", name = "Chae Hae-in", message = "O cheiro do Jin Woo é bom \uD83D\uDE33", imageUrl = "https://images4.alphacoders.com/139/1391416.png")
-var bellion = User(login = "SombraMaisForte", senha = "MorraAntares123", name = "Bellion", message = "Ashborn é absoluto.", imageUrl = "https://staticg.sportskeeda.com/editor/2024/02/a1b54-17071808977993-1920.jpg")
-
-val users = listOf(mainUser, antares, igris, beru, chaHaeIn, bellion)
-
 var chatBackgroundColor = Color(0xE5FFFAFA)
 
 @Composable
