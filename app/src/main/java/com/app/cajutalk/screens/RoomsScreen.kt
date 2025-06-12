@@ -448,7 +448,7 @@ fun RoomsScreen(navController: NavController, roomViewModel: DataViewModel, sala
             }.onFailure { error ->
                 Toast.makeText(
                     context,
-                    "Erro ao entrar na sala: ${error.message}",
+                    "Erro ao entrar na sala ${error.message}",
                     Toast.LENGTH_SHORT
                 ).show()
                 salaViewModel.onEntrarSalaResultConsumed() // Limpa o estado
