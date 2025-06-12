@@ -133,7 +133,7 @@ fun CajuTalkApp(factory: ViewModelFactory) {
                 SearchUserScreen(
                     navController = navController,
                     dataViewModel = dataViewModel,
-                    /*userViewModel = viewModel(factory = factory)*/
+                    userViewModel = viewModel(factory = factory)
                 )
             }
             composable("searched-user-profile") {

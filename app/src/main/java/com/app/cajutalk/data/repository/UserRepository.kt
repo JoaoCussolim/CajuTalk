@@ -72,9 +72,6 @@ class UserRepository(
     }
 
     suspend fun searchUsers(searchTerm: String): Result<List<UsuarioDto>> {
-        if (searchTerm.isBlank()) {
-            return Result.failure(IllegalArgumentException("Termo de busca não pode ser vazio."))
-        }
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.buscarUsuarios(searchTerm)

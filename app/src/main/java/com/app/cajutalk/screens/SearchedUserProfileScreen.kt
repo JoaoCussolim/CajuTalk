@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -33,7 +34,7 @@ import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.viewmodels.DataViewModel
 
 @Composable
-fun ProfileHeader(userName: String, userImageURL: String) {
+fun ProfileHeader(userName: String, userImageURL: String?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -48,13 +49,15 @@ fun ProfileHeader(userName: String, userImageURL: String) {
             color = HEADER_TEXT_COLOR
         )
         AsyncImage(
-            model = userImageURL,
+            model = userImageURL?.replace("http://", "https://"),
             contentDescription = "Imagem do usuário",
             modifier = Modifier
                 .size(160.dp)
                 .clip(CircleShape)
                 .background(Color(0xFFFFDDC1)),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            error = painterResource(id = R.drawable.placeholder_image),
+            placeholder = painterResource(id = R.drawable.placeholder_image)
         )
     }
 }
@@ -64,7 +67,9 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
     val user = dataViewModel.usuarioProcurado
 
     if (user == null) {
-        Text("Erro: usuário  não encontrado")
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+            Text("Erro: usuário não encontrado.")
+        }
         return
     }
 
@@ -74,7 +79,7 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
             .background(color = BACKGROUND_COLOR)
     ) {
         DefaultBackIcon(navController)
-        user.FotoPerfilURL?.let { user.NomeUsuario?.let { it1 -> ProfileHeader(it1, it) } }
+        ProfileHeader(user.NomeUsuario ?: "Usuário", user.FotoPerfilURL)
 
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -99,15 +104,15 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
                     color = Color(0xFFF08080),
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                user.Recado?.let {
-                    Text(
-                        text = it,
-                        fontSize = 18.sp,
-                        fontFamily = FontFamily(Font(R.font.lexend)),
-                        fontWeight = FontWeight(400),
-                        color = Color.Black
-                    )
-                }
+
+                Text(
+                    // Lida com o caso do recado ser nulo ou vazio
+                    text = if (user.Recado.isNullOrBlank()) "Nenhum recado." else user.Recado,
+                    fontSize = 18.sp,
+                    fontFamily = FontFamily(Font(R.font.lexend)),
+                    fontWeight = FontWeight(400),
+                    color = if (user.Recado.isNullOrBlank()) Color.Gray else Color.Black
+                )
             }
         }
     }
