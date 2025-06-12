@@ -77,17 +77,13 @@ fun FocusClearContainer(content: @Composable () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
+fun CajuTalkApp(factory: ViewModelFactory) {
     val navController = rememberNavController()
     val audioRecorderViewModel = AudioRecorderViewModel()
-    val dataViewModel: DataViewModel = viewModel() // DataViewModel doesn't require factory as it has no dependencies
-    val authViewModel: AuthViewModel = viewModel(factory = factory) // Obtenha o AuthViewModel aqui
+    val dataViewModel: DataViewModel = viewModel()
+    val authViewModel: AuthViewModel = viewModel(factory = factory)
 
-    val startDestination = if (authViewModel.isLoggedIn()) {
-        "salas"
-    } else {
-        "login"
-    }
+    val startDestination = "login"
 
     FocusClearContainer {
         NavHost(
@@ -128,7 +124,9 @@ fun CajuTalkApp(factory: ViewModelFactory) { // Receive the factory here
             composable("user-profile") {
                 UserProfileScreen(
                     navController = navController,
-                    /*userViewModel = viewModel(factory = factory)*/
+                    dataViewModel = dataViewModel,
+                    userViewModel = viewModel(factory = factory),
+                    authViewModel = authViewModel
                 )
             }
             composable("search-user") {

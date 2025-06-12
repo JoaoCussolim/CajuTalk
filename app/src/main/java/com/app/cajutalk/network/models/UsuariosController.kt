@@ -7,10 +7,10 @@ data class UsuarioDto(
     val ID: Int,
 
     @SerializedName("nomeUsuario")
-    val NomeUsuario: String,
+    val NomeUsuario: String?,
 
     @SerializedName("loginUsuario")
-    val LoginUsuario: String,
+    val LoginUsuario: String?,
 
     @SerializedName("fotoPerfilURL")
     val FotoPerfilURL: String?,
@@ -20,9 +20,18 @@ data class UsuarioDto(
 )
 
 data class UsuarioUpdateDto(
+    @SerializedName("nomeUsuario")
     val NomeUsuario: String?,
+
+    @SerializedName("loginUsuario")
     val LoginUsuario: String?,
+
+    @SerializedName("senhaUsuario")
     val SenhaUsuario: String?, // New password
+
+    @SerializedName("novaFotoPerfil")
     val NovaFotoPerfil: String?, // URL of the new profile picture
+
+    @SerializedName("recado")
     val Recado: String?
 )

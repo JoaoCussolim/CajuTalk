@@ -1,51 +1,28 @@
 package com.app.cajutalk.screens
 
 import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -55,228 +32,170 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
+import com.app.cajutalk.network.models.UsuarioDto
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.BACKGROUND_COLOR
 import com.app.cajutalk.ui.theme.BACK_ICON_TINT
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
 import com.app.cajutalk.ui.theme.WAVE_COLOR
+import com.app.cajutalk.viewmodels.AuthViewModel
+import com.app.cajutalk.viewmodels.DataViewModel
+import com.app.cajutalk.viewmodels.UserViewModel
+
+private const val TAG = "UserProfileDebug"
 
 @Composable
-fun ColorPicker(selectedColor: Color, onColorChanged: (Color) -> Unit) {
-    var red by remember { mutableIntStateOf((selectedColor.red * 255).toInt()) }
-    var green by remember { mutableIntStateOf((selectedColor.green * 255).toInt()) }
-    var blue by remember { mutableIntStateOf((selectedColor.blue * 255).toInt()) }
-    var textColor by remember { mutableStateOf("$red, $green, $blue") }
+fun UserProfileScreen(
+    navController: NavController,
+    dataViewModel: DataViewModel,
+    userViewModel: UserViewModel,
+    authViewModel: AuthViewModel // MUDANÇA: Adicionado
+) {
+    val context = LocalContext.current
 
-    fun updateColorFromText(input: String) {
-        val values = input.split(",").map { it.trim().toIntOrNull() ?: 0 }
-        if (values.size == 3) {
-            red = values[0].coerceIn(0, 255)
-            green = values[1].coerceIn(0, 255)
-            blue = values[2].coerceIn(0, 255)
-            onColorChanged(Color(red / 255f, green / 255f, blue / 255f))
+    val usuarioLogado = dataViewModel.usuarioLogado
+    if (usuarioLogado == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Erro: Usuário não encontrado.")
+        }
+        return
+    }
+
+    var nome by remember { mutableStateOf(usuarioLogado.NomeUsuario ?: "") }
+    var recado by remember { mutableStateOf(usuarioLogado.Recado ?: "") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) } // NOVO
+
+    val updateUserResult by userViewModel.updateUserResult.observeAsState()
+    val deleteUserResult by userViewModel.deleteUserResult.observeAsState() // NOVO
+    val isLoading by userViewModel.isLoading.observeAsState(false)
+
+    LaunchedEffect(updateUserResult) {
+        updateUserResult?.let { result ->
+            result.onSuccess { updatedUser ->
+                Log.d(TAG, "1. A atualização do usuário foi bem-sucedida.")
+
+                val newUsuarioDto = UsuarioDto(
+                    ID = updatedUser.ID,
+                    NomeUsuario = updatedUser.NomeUsuario ?: "",
+                    LoginUsuario = updatedUser.LoginUsuario ?: "",
+                    FotoPerfilURL = updatedUser.FotoPerfilURL,
+                    Recado = updatedUser.Recado
+                )
+
+                dataViewModel.usuarioLogado = newUsuarioDto
+
+                Log.d(TAG, "2. DataViewModel local foi atualizado.")
+                Toast.makeText(context, "Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "3. Toast de sucesso foi exibido.")
+                navController.popBackStack()
+
+                Log.d(TAG, "4. Navegação para 'salas' foi iniciada.")
+            }.onFailure {
+                Log.e(TAG, "A atualização do usuário falhou.", it)
+                Toast.makeText(context, "Falha ao atualizar o perfil: ${it.message}", Toast.LENGTH_LONG).show()
+            }
+            userViewModel.onUpdateUserResultConsumed()
         }
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .background(
-                    Color(red / 255f, green / 255f, blue / 255f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .border(2.dp, Color.Black, shape = RoundedCornerShape(8.dp))
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = textColor,
-            onValueChange = { input ->
-                textColor = input
-                updateColorFromText(input)
-            },
-            label = { Text(text = "RGB", color = ACCENT_COLOR) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ACCENT_COLOR,
-                cursorColor = ACCENT_COLOR,
-                unfocusedBorderColor = ACCENT_COLOR,
-            )
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text("Vermelho: $red", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
-            R.font.lexend
-        )), color = Color.Black)
-        Slider(
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFFF08080),
-                activeTrackColor = Color(0xFFFF7094),
-                inactiveTrackColor = Color(0xFFDDDDDD)
-            ),
-            value = red.toFloat(),
-            onValueChange = { red = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(
-                Color(red / 255f, green / 255f, blue / 255f)
-            ) },
-            valueRange = 0f..255f
-        )
-
-        Text("Verde: $green", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
-            R.font.lexend
-        )), color = Color.Black)
-        Slider(
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFFF08080),
-                activeTrackColor = Color(0xFFFF7094),
-                inactiveTrackColor = Color(0xFFDDDDDD)
-            ),
-            value = green.toFloat(),
-            onValueChange = { green = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(
-                Color(red / 255f, green / 255f, blue / 255f)
-            ) },
-            valueRange = 0f..255f
-        )
-
-        Text("Azul: $blue", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(
-            R.font.lexend
-        )), color = Color.Black)
-        Slider(
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFFF08080),
-                activeTrackColor = Color(0xFFFF7094),
-                inactiveTrackColor = Color(0xFFDDDDDD)
-            ),
-            value = blue.toFloat(),
-            onValueChange = { blue = it.toInt(); textColor = "$red, $green, $blue"; onColorChanged(
-                Color(red / 255f, green / 255f, blue / 255f)
-            ) },
-            valueRange = 0f..255f
-        )
-    }
-}
-
-@Composable
-fun ColorPickerButton(selectedColor: Color, onColorSelected: (Color) -> Unit) {
-    var showDialog by remember { mutableStateOf(false) }
-    var tempColor by remember { mutableStateOf(selectedColor) }
-
-    Box(
-        modifier = Modifier
-            .size(50.dp)
-            .background(tempColor, shape = RoundedCornerShape(8.dp))
-            .border(2.dp, Color.Black, shape = RoundedCornerShape(8.dp))
-            .clickable { showDialog = true }
-    )
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(text = "Escolha uma cor", fontFamily = FontFamily(Font(R.font.baloo_bhai))) },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ColorPicker(
-                        selectedColor = tempColor,
-                        onColorChanged = { color -> tempColor = color }
-                    )
+    // NOVO: Efeito para lidar com o resultado da exclusão da conta
+    LaunchedEffect(deleteUserResult) {
+        deleteUserResult?.let { result ->
+            result.onSuccess {
+                Toast.makeText(context, "Conta excluída com sucesso.", Toast.LENGTH_SHORT).show()
+                authViewModel.logout()
+                navController.navigate("login") {
+                    popUpTo(navController.graph.id) {
+                        inclusive = true
+                    }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onColorSelected(tempColor)
-                        showDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = ACCENT_COLOR)
-                ) {
-                    Text("Confirmar")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = ACCENT_COLOR)
-                ) {
-                    Text("Cancelar")
-                }
+            }.onFailure {
+                Toast.makeText(context, "Falha ao excluir a conta: ${it.message}", Toast.LENGTH_LONG).show()
             }
-        )
+            userViewModel.onDeleteUserResultConsumed()
+        }
     }
-}
-
-@Composable
-fun UserProfileScreen(navController: NavController) {
-    val accentColor = Color(0xFFFF6F9C)
-    var name by remember { mutableStateOf(mainUser.name) }
-    var message by remember { mutableStateOf(mainUser.message) }
-    var selectedColor by remember { mutableStateOf(chatBackgroundColor) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
-    var stringSelectedImageUri by remember { mutableStateOf(mainUser.imageUrl) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if(uri != null){
-            selectedImageUri = uri
-            stringSelectedImageUri = uri.toString()
-        }
+        selectedImageUri = uri
     }
 
-    if (showDialog) {
+    val hasChanges = nome != usuarioLogado.NomeUsuario || recado != (usuarioLogado.Recado ?: "") || selectedImageUri != null
+
+    if (showUnsavedChangesDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showUnsavedChangesDialog = false },
             title = { Text(text = "Descartar alterações?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
-            text = { Text(text = "Você tem alterações não salvas. Deseja sair mesmo assim?", fontFamily = FontFamily(Font(
-                R.font.lexend
-            )), color = ACCENT_COLOR) },
+            text = { Text(text = "Você tem alterações não salvas. Deseja sair mesmo assim?", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR) },
             confirmButton = {
                 TextButton(onClick = {
-                    showDialog = false
+                    showUnsavedChangesDialog = false
                     navController.popBackStack()
                 }) {
                     Text(text = "Sair sem salvar", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = { showUnsavedChangesDialog = false }) {
                     Text(text = "Cancelar", fontFamily = FontFamily(Font(R.font.lexend)), color = ACCENT_COLOR)
                 }
             }
         )
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(color = BACKGROUND_COLOR)
-    ) {
+    // NOVO: Diálogo de confirmação para exclusão
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Confirmar Exclusão", color = Color.Red) },
+            text = { Text("Tem certeza que deseja excluir sua conta? Esta ação é permanente e não pode ser desfeita.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        userViewModel.deleteUser(usuarioLogado.ID)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(color = BACKGROUND_COLOR)) {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-            contentDescription = "Sair",
+            contentDescription = "Voltar",
             modifier = Modifier
                 .padding(16.dp)
                 .size(40.dp)
                 .clickable {
-                    if(message == mainUser.message && name == mainUser.name && stringSelectedImageUri == mainUser.imageUrl && chatBackgroundColor == selectedColor){
+                    if (hasChanges) {
+                        showUnsavedChangesDialog = true
+                    } else {
                         navController.popBackStack()
-                    }else{
-                        showDialog = true
                     }
-                           },
+                },
             tint = BACK_ICON_TINT
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 60.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // ... (código do Header da tela, sem mudanças)
             Text(
-                text = "Olá, ${mainUser.login}",
+                text = "Olá, ${usuarioLogado.LoginUsuario}",
                 fontSize = 30.sp,
                 fontFamily = FontFamily(Font(R.font.baloo_bhai)),
                 fontWeight = FontWeight(700),
@@ -285,21 +204,24 @@ fun UserProfileScreen(navController: NavController) {
 
             Box(
                 modifier = Modifier
-                    .size(140.dp),
+                    .size(140.dp)
+                    .padding(top = 16.dp),
                 contentAlignment = Alignment.BottomEnd
             ) {
                 AsyncImage(
-                    model = selectedImageUri ?: mainUser.imageUrl,
+                    model = selectedImageUri ?: usuarioLogado.FotoPerfilURL?.replace("http://", "https://"),
                     contentDescription = "Ícone do Usuário",
                     modifier = Modifier
-                        .size(160.dp)
+                        .size(120.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFFDDC1)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(id = R.drawable.placeholder_image),
+                    placeholder = painterResource(id = R.drawable.placeholder_image)
                 )
 
                 IconButton(
-                    onClick = {  imagePickerLauncher.launch("image/*") },
+                    onClick = { imagePickerLauncher.launch("image/*") },
                     modifier = Modifier
                         .size(60.dp)
                         .background(Color(0xFFFF80AB), shape = CircleShape)
@@ -322,12 +244,7 @@ fun UserProfileScreen(navController: NavController) {
                 .height(550.dp)
                 .align(alignment = Alignment.BottomCenter)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Text(
                     text = "Pessoal",
                     fontSize = 28.sp,
@@ -347,21 +264,13 @@ fun UserProfileScreen(navController: NavController) {
                 )
 
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = {
-                        Text(
-                            text = "",
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily(Font(R.font.lexend)),
-                            fontWeight = FontWeight(700),
-                            color = Color(0xFFF08080),
-                        )
-                    },
+                    value = nome,
+                    onValueChange = { nome = it },
+                    label = { Text("") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        cursorColor = accentColor
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
                     )
                 )
 
@@ -376,73 +285,48 @@ fun UserProfileScreen(navController: NavController) {
                 )
 
                 OutlinedTextField(
-                    value = message,
-                    onValueChange = { message = it },
-                    label = {
-                        Text(
-                            text = "",
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily(Font(R.font.lexend)),
-                            fontWeight = FontWeight(700),
-                            color = Color(0xFFF08080),
-                        )
-                    },
+                    value = recado,
+                    onValueChange = { recado = it },
+                    label = { Text("") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        cursorColor = accentColor
+                        focusedBorderColor = ACCENT_COLOR,
+                        cursorColor = ACCENT_COLOR
                     )
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.weight(1f)) // Empurra os botões para baixo
 
-                Text(
-                    text = "Personalização",
-                    fontSize = 28.sp,
-                    fontFamily = FontFamily(Font(R.font.anton)),
-                    fontWeight = FontWeight(400),
-                    color = WAVE_COLOR,
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Text(
-                    text = "Cor de Fundo",
-                    fontSize = 20.sp,
-                    fontFamily = FontFamily(Font(R.font.baloo_bhai)),
-                    fontWeight = FontWeight(400),
-                    color = Color(0xFFF08080),
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceAround
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
+                    onClick = {
+                        userViewModel.updateUserProfile(
+                            userId = usuarioLogado.ID,
+                            nome = nome,
+                            recado = recado,
+                            oldFotoUrl = usuarioLogado.FotoPerfilURL,
+                            newImageUri = selectedImageUri
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    enabled = hasChanges && !isLoading
                 ) {
-                    ColorPickerButton(selectedColor) { newColor ->
-                        selectedColor = newColor;
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(text = "Salvar", color = Color.White, fontSize = 20.sp, fontFamily = FontFamily(Font(R.font.lexend)))
                     }
+                }
 
-                    Spacer(modifier = Modifier.width(18.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    Text("RGB Atual", fontSize = 15.sp, fontWeight = FontWeight(400), color = Color(0xFFF08080), fontFamily = FontFamily(Font(
-                        R.font.lexend
-                    )))
-
-                    Spacer(modifier = Modifier.width(32.dp))
-
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
-                        onClick = {
-                            mainUser.message = message
-                            mainUser.name = name
-                            mainUser.imageUrl = stringSelectedImageUri
-                            chatBackgroundColor = selectedColor
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Salvar", color = Color.White, fontFamily = FontFamily(Font(R.font.lexend)))
-                    }
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935), contentColor = Color.White),
+                    onClick = { showDeleteConfirmDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    enabled = !isLoading
+                ) {
+                    Text(text = "Deletar Conta", fontSize = 20.sp, fontFamily = FontFamily(Font(R.font.lexend)))
                 }
             }
         }

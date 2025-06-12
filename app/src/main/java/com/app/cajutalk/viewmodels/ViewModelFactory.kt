@@ -33,7 +33,8 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(UserViewModel::class.java) -> {
                 val userRepository = UserRepository(apiService, application.applicationContext)
-                UserViewModel(application, userRepository) as T
+                val fileUploadRepository = FileUploadRepository(apiService, application.applicationContext)
+                UserViewModel(application, userRepository, fileUploadRepository) as T
             }
 
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

@@ -1,17 +1,21 @@
 package com.app.cajutalk.viewmodels
 
 import android.app.Application
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.app.cajutalk.data.repository.FileUploadRepository
 import com.app.cajutalk.data.repository.UserRepository
+import com.app.cajutalk.network.models.UploadResponse
 import com.app.cajutalk.network.models.Usuario
 import com.app.cajutalk.network.models.UsuarioDto
 import com.app.cajutalk.network.models.UsuarioUpdateDto
 import kotlinx.coroutines.launch
 
-class UserViewModel(application: Application, private val userRepository: UserRepository) : AndroidViewModel(application) { // Updated constructor
+class UserViewModel(application: Application, private val userRepository: UserRepository, private val fileUploadRepository: FileUploadRepository) : AndroidViewModel(application) { // Updated constructor
 
     private val _userById = MutableLiveData<Result<UsuarioDto>>()
     val userById: LiveData<Result<UsuarioDto>> = _userById
@@ -25,14 +29,53 @@ class UserViewModel(application: Application, private val userRepository: UserRe
     private val _searchedUsers = MutableLiveData<Result<List<UsuarioDto>>>()
     val searchedUsers: LiveData<Result<List<UsuarioDto>>> = _searchedUsers
 
-    private val _updateUserResult = MutableLiveData<Result<Usuario>>()
-    val updateUserResult: LiveData<Result<Usuario>> = _updateUserResult
+    private val _updateUserResult = MutableLiveData<Result<Usuario>?>()
+    val updateUserResult: LiveData<Result<Usuario>?> = _updateUserResult
 
-    private val _deleteUserResult = MutableLiveData<Result<Unit>>()
-    val deleteUserResult: LiveData<Result<Unit>> = _deleteUserResult
+    private val _deleteUserResult = MutableLiveData<Result<Unit>?>()
+    val deleteUserResult: LiveData<Result<Unit>?> = _deleteUserResult
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
+
+    fun updateUserProfile(userId: Int, nome: String, recado: String, oldFotoUrl: String?, newImageUri: Uri?) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                val fotoUrlFinal = if (newImageUri != null) {
+                    val uploadResult = fileUploadRepository.uploadFile(newImageUri)
+                    uploadResult.getOrNull()?.url ?: oldFotoUrl
+                } else {
+                    oldFotoUrl
+                }
+
+                val updateDto = UsuarioUpdateDto(
+                    NomeUsuario = nome,
+                    Recado = recado,
+                    NovaFotoPerfil = fotoUrlFinal,
+                    LoginUsuario = null,
+                    SenhaUsuario = null
+                )
+                val finalResult = userRepository.updateUser(userId, updateDto)
+                _updateUserResult.postValue(finalResult)
+
+            } catch (e: Exception) {
+                // MUDANÇA: Adicionado Log.e para capturar o erro completo
+                Log.e("UserViewModel", "Falha ao atualizar o perfil", e)
+                _updateUserResult.postValue(Result.failure(e))
+            } finally {
+                _isLoading.postValue(false)
+            }
+        }
+    }
+
+    fun onDeleteUserResultConsumed() {
+        _deleteUserResult.value = null
+    }
+
+    fun onUpdateUserResultConsumed() {
+        _updateUserResult.value = null
+    }
 
     fun getUserById(userId: Int) {
         _isLoading.value = true

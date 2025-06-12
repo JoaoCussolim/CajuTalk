@@ -74,7 +74,7 @@ fun SearchedUserProfileScreen(navController: NavController, dataViewModel: DataV
             .background(color = BACKGROUND_COLOR)
     ) {
         DefaultBackIcon(navController)
-        user.FotoPerfilURL?.let { ProfileHeader(user.NomeUsuario, it) }
+        user.FotoPerfilURL?.let { user.NomeUsuario?.let { it1 -> ProfileHeader(it1, it) } }
 
         Card(
             shape = RoundedCornerShape(16.dp),
