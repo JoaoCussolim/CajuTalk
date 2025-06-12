@@ -73,25 +73,21 @@ fun UserProfileScreen(
 
     LaunchedEffect(updateUserResult) {
         updateUserResult?.let { result ->
-            result.onSuccess { updatedUser ->
-                Log.d(TAG, "1. A atualização do usuário foi bem-sucedida.")
+            result.onSuccess { newCorrectDto ->
+                Log.d(TAG, "1. A atualização do usuário foi bem-sucedida no ViewModel.")
 
-                val newUsuarioDto = UsuarioDto(
-                    ID = updatedUser.ID,
-                    NomeUsuario = updatedUser.NomeUsuario ?: "",
-                    LoginUsuario = updatedUser.LoginUsuario ?: "",
-                    FotoPerfilURL = updatedUser.FotoPerfilURL,
-                    Recado = updatedUser.Recado
-                )
+                // Agora simplesmente atribuímos o DTO correto que o ViewModel nos deu.
+                dataViewModel.usuarioLogado = newCorrectDto
+                Log.d(TAG, "2. DataViewModel local foi atualizado com o DTO do ViewModel.")
 
-                dataViewModel.usuarioLogado = newUsuarioDto
-
-                Log.d(TAG, "2. DataViewModel local foi atualizado.")
                 Toast.makeText(context, "Perfil atualizado com sucesso!", Toast.LENGTH_SHORT).show()
                 Log.d(TAG, "3. Toast de sucesso foi exibido.")
-                navController.popBackStack()
 
+                navController.navigate("salas") {
+                    popUpTo("user-profile") { inclusive = true }
+                }
                 Log.d(TAG, "4. Navegação para 'salas' foi iniciada.")
+
             }.onFailure {
                 Log.e(TAG, "A atualização do usuário falhou.", it)
                 Toast.makeText(context, "Falha ao atualizar o perfil: ${it.message}", Toast.LENGTH_LONG).show()
@@ -100,7 +96,6 @@ fun UserProfileScreen(
         }
     }
 
-    // NOVO: Efeito para lidar com o resultado da exclusão da conta
     LaunchedEffect(deleteUserResult) {
         deleteUserResult?.let { result ->
             result.onSuccess {
@@ -193,7 +188,6 @@ fun UserProfileScreen(
             modifier = Modifier.fillMaxWidth().padding(top = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ... (código do Header da tela, sem mudanças)
             Text(
                 text = "Olá, ${usuarioLogado.LoginUsuario}",
                 fontSize = 30.sp,
@@ -301,10 +295,9 @@ fun UserProfileScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7094)),
                     onClick = {
                         userViewModel.updateUserProfile(
-                            userId = usuarioLogado.ID,
+                            currentUserDto = usuarioLogado,
                             nome = nome,
                             recado = recado,
-                            oldFotoUrl = usuarioLogado.FotoPerfilURL,
                             newImageUri = selectedImageUri
                         )
                     },

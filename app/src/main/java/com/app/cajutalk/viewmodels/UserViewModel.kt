@@ -29,8 +29,8 @@ class UserViewModel(application: Application, private val userRepository: UserRe
     private val _searchedUsers = MutableLiveData<Result<List<UsuarioDto>>>()
     val searchedUsers: LiveData<Result<List<UsuarioDto>>> = _searchedUsers
 
-    private val _updateUserResult = MutableLiveData<Result<Usuario>?>()
-    val updateUserResult: LiveData<Result<Usuario>?> = _updateUserResult
+    private val _updateUserResult = MutableLiveData<Result<UsuarioDto>?>()
+    val updateUserResult: LiveData<Result<UsuarioDto>?> = _updateUserResult
 
     private val _deleteUserResult = MutableLiveData<Result<Unit>?>()
     val deleteUserResult: LiveData<Result<Unit>?> = _deleteUserResult
@@ -38,29 +38,43 @@ class UserViewModel(application: Application, private val userRepository: UserRe
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
-    fun updateUserProfile(userId: Int, nome: String, recado: String, oldFotoUrl: String?, newImageUri: Uri?) {
+    fun updateUserProfile(
+        currentUserDto: UsuarioDto,
+        nome: String,
+        recado: String,
+        newImageUri: Uri?
+    ) {
         _isLoading.value = true
         viewModelScope.launch {
             try {
+                // Passo 1: Determina a URL final da foto.
                 val fotoUrlFinal = if (newImageUri != null) {
-                    val uploadResult = fileUploadRepository.uploadFile(newImageUri)
-                    uploadResult.getOrNull()?.url ?: oldFotoUrl
+                    fileUploadRepository.uploadFile(newImageUri).getOrThrow().url
                 } else {
-                    oldFotoUrl
+                    currentUserDto.FotoPerfilURL
                 }
 
+                // Passo 2: Cria o DTO de atualização e envia para a API.
                 val updateDto = UsuarioUpdateDto(
                     NomeUsuario = nome,
-                    Recado = recado,
+                    Recado = recado.ifBlank { null },
                     NovaFotoPerfil = fotoUrlFinal,
                     LoginUsuario = null,
                     SenhaUsuario = null
                 )
-                val finalResult = userRepository.updateUser(userId, updateDto)
-                _updateUserResult.postValue(finalResult)
+
+                // Ignoramos a resposta da API, só verificamos se deu erro ou não.
+                userRepository.updateUser(currentUserDto.ID, updateDto).getOrThrow()
+
+                // Passo 3: SUCESSO! Construímos o DTO correto NÓS MESMOS.
+                val newCorrectDto = currentUserDto.copy(
+                    NomeUsuario = nome,
+                    Recado = recado.ifBlank { null },
+                    FotoPerfilURL = fotoUrlFinal
+                )
+                _updateUserResult.postValue(Result.success(newCorrectDto))
 
             } catch (e: Exception) {
-                // MUDANÇA: Adicionado Log.e para capturar o erro completo
                 Log.e("UserViewModel", "Falha ao atualizar o perfil", e)
                 _updateUserResult.postValue(Result.failure(e))
             } finally {
@@ -113,13 +127,8 @@ class UserViewModel(application: Application, private val userRepository: UserRe
         }
     }
 
-    fun updateUser(userId: Int, updateDto: UsuarioUpdateDto) {
-        _isLoading.value = true
-        viewModelScope.launch {
-            val result = userRepository.updateUser(userId, updateDto)
-            _updateUserResult.postValue(result)
-            _isLoading.postValue(false)
-        }
+    fun updateUser(userId: Int, updateDto: UsuarioUpdateDto): Result<Usuario> {
+        throw NotImplementedError("Use updateUserProfile para o fluxo de UI. Esta função é para outros usos.")
     }
 
     fun deleteUser(userId: Int) {
