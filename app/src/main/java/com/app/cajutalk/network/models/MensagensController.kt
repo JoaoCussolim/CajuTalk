@@ -3,10 +3,10 @@ package com.app.cajutalk.network.models
 import com.google.gson.annotations.SerializedName
 
 data class MensagemDto(
-    @SerializedName("id"    )
+    @SerializedName("id")
     val Id: Int,
 
-    @SerializedName("salaID")
+    @SerializedName("salaId")
     val SalaId: Int,
 
     @SerializedName("conteudo")
@@ -18,7 +18,7 @@ data class MensagemDto(
     @SerializedName("tipoMensagem")
     val TipoMensagem: String,
 
-    @SerializedName("usuarioID")
+    @SerializedName("usuarioId")
     val UsuarioId: Int,
 
     @SerializedName("loginUsuario")
