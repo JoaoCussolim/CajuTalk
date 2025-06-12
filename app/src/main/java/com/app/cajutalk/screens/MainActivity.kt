@@ -118,7 +118,8 @@ fun CajuTalkApp(factory: ViewModelFactory) {
                     navController = navController,
                     roomViewModel = dataViewModel,
                     mensagemViewModel = viewModel(factory = factory),
-                    userViewModel = viewModel(factory = factory)
+                    userViewModel = viewModel(factory = factory),
+                    salaViewModel = viewModel(factory = factory)
                 )
             }
             composable("user-profile") {

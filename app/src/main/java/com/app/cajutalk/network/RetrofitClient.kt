@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://cajutalkapi.onrender.com/"
+    const val BASE_URL = "https://cajutalkapi.onrender.com/"
 
     private var internalAuthService: ApiService? = null
 

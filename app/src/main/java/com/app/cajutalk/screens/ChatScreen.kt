@@ -59,6 +59,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
 import com.app.cajutalk.classes.AudioPlayer
+import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.MensagemDto
 import com.app.cajutalk.ui.theme.ACCENT_COLOR
 import com.app.cajutalk.ui.theme.HEADER_TEXT_COLOR
@@ -66,6 +67,7 @@ import com.app.cajutalk.ui.theme.WAVE_COLOR
 import com.app.cajutalk.viewmodels.AudioRecorderViewModel
 import com.app.cajutalk.viewmodels.DataViewModel
 import com.app.cajutalk.viewmodels.MensagemViewModel
+import com.app.cajutalk.viewmodels.SalaViewModel
 import com.app.cajutalk.viewmodels.UserViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -240,7 +242,15 @@ fun ImageContainer(
 ) {
     val borderColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
     var showFullScreen by remember { mutableStateOf(false) }
-    val secureImageUrl = remember(imageUrl) { imageUrl.replace("http://", "https://") }
+    val fullImageUrl = remember(imageUrl) {
+        if (imageUrl.startsWith("http")) {
+            imageUrl
+        } else {
+            RetrofitClient.BASE_URL + imageUrl.removePrefix("/")
+        }
+    }
+    val secureImageUrl = remember(fullImageUrl) { fullImageUrl.replace("http://", "https://") }
+
 
     Row(
         modifier = Modifier
@@ -320,7 +330,14 @@ fun VideoPreview(
     val borderColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
     var showFullScreen by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val secureVideoUrl = remember(videoUrl) { videoUrl.replace("http://", "https://") }
+    val fullVideoUrl = remember(videoUrl) {
+        if (videoUrl.startsWith("http")) {
+            videoUrl
+        } else {
+            RetrofitClient.BASE_URL + videoUrl.removePrefix("/")
+        }
+    }
+    val secureVideoUrl = remember(fullVideoUrl) { fullVideoUrl.replace("http://", "https://") }
 
     // MUDANÇA: Melhor gerenciamento do ciclo de vida do ExoPlayer
     val exoPlayer = remember(secureVideoUrl) {
@@ -465,7 +482,8 @@ fun ChatScreen(
     navController: NavController,
     roomViewModel: DataViewModel,
     mensagemViewModel: MensagemViewModel,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    salaViewModel: SalaViewModel
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -491,6 +509,20 @@ fun ChatScreen(
 
     var creatorName by remember { mutableStateOf<String?>(null) }
     val creatorUserResult by userViewModel.userById.observeAsState()
+
+    val deleteSalaResult by salaViewModel.deleteSalaResult.observeAsState()
+
+    LaunchedEffect(deleteSalaResult) {
+        deleteSalaResult?.onSuccess {
+            Toast.makeText(context, "Sala '${sala.Nome}' excluída com sucesso.", Toast.LENGTH_SHORT).show()
+            navController.navigate("salas") {
+                popUpTo("salas") { inclusive = true }
+            }
+        }
+        deleteSalaResult?.onFailure {
+            Toast.makeText(context, "Erro ao excluir a sala: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(key1 = sala.CriadorID) {
         if (creatorName == null) {
@@ -525,7 +557,6 @@ fun ChatScreen(
 
     LaunchedEffect(enviarMensagemResult) {
         enviarMensagemResult?.onSuccess { novaMensagem ->
-            // Evita adicionar mensagens duplicadas
             if (messages.none { it.Id == novaMensagem.Id }) {
                 messages.add(novaMensagem)
             }
@@ -557,7 +588,7 @@ fun ChatScreen(
             Toast.makeText(context, "Enviando ${tipoMensagem.lowercase()}...", Toast.LENGTH_SHORT).show()
             mensagemViewModel.enviarMensagem(
                 idSala = sala.ID,
-                conteudoTexto = null,
+                conteudoTexto = "arquivo",
                 tipoMensagem = tipoMensagem,
                 arquivoUri = it
             )
@@ -713,7 +744,7 @@ fun ChatScreen(
                                             } else {
                                                 viewModel.stopRecording()
                                                 viewModel.audioPath?.let { path ->
-                                                    mensagemViewModel.enviarMensagem(sala.ID, null, "Audio", Uri.fromFile(File(path)))
+                                                    mensagemViewModel.enviarMensagem(sala.ID, "audio", "Audio", Uri.fromFile(File(path)))
                                                 }
                                             }
                                             true
@@ -740,7 +771,27 @@ fun ChatScreen(
         }
 
         if (showAlertDialog) {
-            // ... (AlertDialog para excluir sala)
+            AlertDialog(
+                onDismissRequest = { showAlertDialog = false },
+                title = { Text("Excluir Sala", color = Color.Red) },
+                text = { Text("Tem certeza que deseja excluir a sala '${sala.Nome}'? Esta ação é permanente.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showAlertDialog = false
+                            salaViewModel.deleteSala(sala.ID)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Excluir")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAlertDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }
