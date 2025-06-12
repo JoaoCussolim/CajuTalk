@@ -10,6 +10,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ViewGroup
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,6 +59,7 @@ import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.cajutalk.R
+import com.app.cajutalk.classes.AndroidDownloader
 import com.app.cajutalk.classes.AudioPlayer
 import com.app.cajutalk.network.RetrofitClient
 import com.app.cajutalk.network.models.MensagemDto
@@ -220,6 +222,14 @@ fun FileBubble(fileUrl: String, isUserMessage: Boolean) {
     val context = LocalContext.current
     val fileName = remember { Uri.parse(fileUrl).lastPathSegment ?: "Arquivo" }
 
+    val downloader = remember { AndroidDownloader(context) }
+
+    val fullFileUrl = remember(fileUrl) {
+        if (fileUrl.startsWith("http")) fileUrl else RetrofitClient.BASE_URL + fileUrl.removePrefix("/")
+    }
+
+    val secureUrl = fullFileUrl.replace("http://", "https://")
+
     val bubbleColor = if (isUserMessage) Color(0xFFFF7090) else Color(0xFFF08080)
     val shape = if (isUserMessage) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
     else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
@@ -246,8 +256,12 @@ fun FileBubble(fileUrl: String, isUserMessage: Boolean) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = {
-                Toast.makeText(context, "Download (a ser implementado)", Toast.LENGTH_SHORT).show()
+            IconButton(onClick =  {
+                val fileExtension = MimeTypeMap.getFileExtensionFromUrl(fileName)
+                val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension) ?: "application/octet-stream"
+
+                downloader.downloadFile(secureUrl, fileName, mimeType)
+                Toast.makeText(context, "Iniciando download...", Toast.LENGTH_SHORT).show()
             }) {
                 Icon(
                     painter = painterResource(id = R.drawable.download_icon),
